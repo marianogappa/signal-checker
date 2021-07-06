@@ -1,3 +1,11 @@
+// The main package is only used as a proxy to the signalchecker package to be used as a cli application or as a server.
+//
+// If you're looking for documentation on how to import and use signalchecker in your program, please review the
+// signalchecker package.
+//
+// If you're looking for how to use the cli & server versions, please review the README.
+//
+// If you're looking for the spec for input & output, please review the types package.
 package main
 
 import (
