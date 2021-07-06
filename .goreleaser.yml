@@ -1,0 +1,18 @@
+project_name: signal-checker
+release:
+  github:
+    owner: marianogappa
+    name: signal-checker
+brew:
+  install: bin.install "signal-checker"
+builds:
+- goos:
+  - linux
+  - darwin
+  - windows
+  goarch:
+  - amd64
+  main: .
+  ldflags: -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+  env:
+    - CGO_ENABLED=0
