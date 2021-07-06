@@ -2,6 +2,16 @@
 
 cli tool, server & library to check the results of crypto signals against an exchange's historical data.
 
+## Installation
+
+Either get latest release: https://github.com/marianogappa/signal-checker/releases
+
+Or build locally
+
+```
+$ go get github.com/marianogappa/signal-checker
+```
+
 ## CLI usage
 
 ```bash
