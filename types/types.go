@@ -18,12 +18,6 @@ type SignalCheckInput struct {
 	// Exchange must be "binance"; default is "binance"
 	Exchange string `json:"exchange"`
 
-	// CandlestickInterval must be one of 1m, 3m, 5m, 15m, 30m, 1h, 2h, 4h, 6h, 8h, 12h, 1d, 3d, 1w, 1M
-	// Default 15m
-	// IMPORTANT NOTE: the signal checker will evaluate what happened based on the open and close prices of the
-	// candlestick, and ignore the high and low of that candlestick.
-	CandlestickInterval string `json:"candlestickInterval"`
-
 	// BaseAsset is LTC in LTCUSDT
 	BaseAsset string `json:"baseAsset"`
 
@@ -91,6 +85,8 @@ const (
 	INVALIDATED      = "invalidated"
 	FINISHED_DATASET = "finished_dataset"
 	TAKEN_PROFIT_    = "taken_profit_"
+
+	BINANCE = "binance"
 )
 
 // SignalCheckOutputEvent is an event that happened upon checking a signal.
@@ -155,6 +151,29 @@ type SignalCheckOutput struct {
 	// Logs returns logging information to debug the results. Logs is only returned when input.returnLogs is set.
 	Logs []string `json:"logs"`
 }
+
+// Candlestick is the generic struct for candlestick data for all supported exchanges.
+type Candlestick struct {
+	// Timestamp is the UNIX timestamp (i.e. seconds since UTC Epoch) at which the candlestick started.
+	Timestamp int `json:"t"`
+
+	// OpenPrice is the price at which the candlestick opened.
+	OpenPrice JsonFloat64 `json:"o"`
+
+	// ClosePrice is the price at which the candlestick closed.
+	ClosePrice JsonFloat64 `json:"c"`
+
+	// LowestPrice is the lowest price reached during the candlestick duration.
+	LowestPrice JsonFloat64 `json:"l"`
+
+	// HighestPrice is the highest price reached during the candlestick duration.
+	HighestPrice JsonFloat64 `json:"h"`
+
+	// Volume is the traded volume in base asset during this candlestick.
+	Volume JsonFloat64 `json:"v"`
+}
+
+var ErrOutOfCandlesticks = errors.New("exchange ran out of candlesticks")
 
 type JsonFloat64 float64
 
