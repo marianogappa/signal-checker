@@ -1,6 +1,7 @@
 # signal-checker
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/marianogappa/signal-checker.svg)](https://pkg.go.dev/github.com/marianogappa/signal-checker)
+
 cli tool, server & library to check the results of crypto signals against an exchange's historical data.
 
 ## Installation
