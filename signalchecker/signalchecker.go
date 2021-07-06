@@ -1,3 +1,17 @@
+// The signalchecker package contains the CheckSignal function that does the signal checking.
+//
+// Please review the docs on the types.SignalCheckInput and types.SignalCheckOutput types.
+//
+// If you are importing the package, use it like this:
+//
+// output, err := signalchecker.CheckSignal(input)
+//
+// Note that the output contains richer information about the error than err itself, but you can still use err if it
+// reads better in your code.
+//
+// Consider using this signal checker via de cli binary or as a server, which is also started from the binary.
+// Latest release available at: https://github.com/marianogappa/signal-checker/releases
+// You can also build locally using: go get github.com/marianogappa/signal-checker
 package signalchecker
 
 import (
@@ -9,6 +23,8 @@ import (
 	"github.com/marianogappa/signal-checker/types"
 )
 
+// CheckSignal is the main method of this project, and runs a signal check based on the provided SignalCheckInput.
+// Please review the docs on the types.SignalCheckInput and types.SignalCheckOutput types.
 func CheckSignal(input types.SignalCheckInput) (types.SignalCheckOutput, error) {
 	validationResult, err := validateInput(input)
 	if err != nil {
