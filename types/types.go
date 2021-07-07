@@ -86,8 +86,9 @@ const (
 	FINISHED_DATASET = "finished_dataset"
 	TAKEN_PROFIT_    = "taken_profit_"
 
-	BINANCE = "binance"
-	FTX     = "ftx"
+	BINANCE  = "binance"
+	FTX      = "ftx"
+	COINBASE = "coinbase"
 )
 
 // SignalCheckOutputEvent is an event that happened upon checking a signal.
