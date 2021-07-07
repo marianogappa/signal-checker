@@ -24,6 +24,7 @@ import (
 	"github.com/marianogappa/signal-checker/binance"
 	"github.com/marianogappa/signal-checker/coinbase"
 	"github.com/marianogappa/signal-checker/ftx"
+	"github.com/marianogappa/signal-checker/huobi"
 	"github.com/marianogappa/signal-checker/profitcalculator"
 	"github.com/marianogappa/signal-checker/types"
 )
@@ -46,6 +47,8 @@ func CheckSignal(input types.SignalCheckInput) (types.SignalCheckOutput, error) 
 		candlestickIterator = ftx.BuildCandlestickIterator(input)
 	case types.COINBASE:
 		candlestickIterator = coinbase.BuildCandlestickIterator(input)
+	case types.HUOBI:
+		candlestickIterator = huobi.BuildCandlestickIterator(input)
 	}
 
 	return doCheckSignal(input, candlestickIterator)
@@ -71,8 +74,8 @@ func validateInput(input types.SignalCheckInput) (types.SignalCheckOutput, error
 	if input.Exchange == "" {
 		input.Exchange = "binance"
 	}
-	if input.Exchange != "binance" && input.Exchange != "ftx" && input.Exchange != "coinbase" {
-		return invalidateWith("At the moment the only valid exchanges are 'binance',  'ftx' and 'coinbase'", input)
+	if input.Exchange != "binance" && input.Exchange != "ftx" && input.Exchange != "coinbase" && input.Exchange != "huobi" {
+		return invalidateWith("At the moment the only valid exchanges are 'binance', 'ftx', 'coinbase' and 'huobi'", input)
 	}
 	if input.InitialISO3601 == "" {
 		return invalidateWith("initialISO3601 is required", input)
@@ -122,6 +125,7 @@ func doCheckSignal(input types.SignalCheckInput, nextCandlestick func() (types.C
 		stopLoss                = input.StopLoss
 		err                     error
 		candlestick             types.Candlestick
+		initialTime, _          = time.Parse(time.RFC3339, input.InitialISO3601)
 		output                  = types.SignalCheckOutput{
 			Input:      input,
 			HttpStatus: 200,
@@ -144,13 +148,17 @@ out:
 			output.ErrorMessage = err.Error()
 			break out
 		}
-		prices := []types.JsonFloat64{types.JsonFloat64(candlestick.LowestPrice), types.JsonFloat64(candlestick.HighestPrice)}
-		at := time.Unix(int64(candlestick.Timestamp), 0)
-		atStr := at.Format(time.RFC3339)
+		var (
+			prices = []types.JsonFloat64{types.JsonFloat64(candlestick.LowestPrice), types.JsonFloat64(candlestick.HighestPrice)}
+			at     = time.Unix(int64(candlestick.Timestamp), 0)
+			atStr  = at.Format(time.RFC3339)
+		)
+		if at.Before(initialTime) {
+			continue
+		}
 		for _, price := range prices {
 			if first {
 				first = false
-				// N.B. first is always an open side
 				output.FirstCandleOpenPrice = price
 				output.FirstCandleAt = atStr
 			}

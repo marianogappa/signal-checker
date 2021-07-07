@@ -89,6 +89,7 @@ const (
 	BINANCE  = "binance"
 	FTX      = "ftx"
 	COINBASE = "coinbase"
+	HUOBI    = "huobi"
 )
 
 // SignalCheckOutputEvent is an event that happened upon checking a signal.
