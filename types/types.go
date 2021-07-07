@@ -15,7 +15,7 @@ import (
 // - Durations are in seconds.
 // - All prices are floating point numbers for the given asset pair on the given exchange.
 type SignalCheckInput struct {
-	// Exchange must be "binance"; default is "binance"
+	// Exchange must be "binance" or "ftx"; default is "binance"
 	Exchange string `json:"exchange"`
 
 	// BaseAsset is LTC in LTCUSDT
@@ -87,6 +87,7 @@ const (
 	TAKEN_PROFIT_    = "taken_profit_"
 
 	BINANCE = "binance"
+	FTX     = "ftx"
 )
 
 // SignalCheckOutputEvent is an event that happened upon checking a signal.
@@ -95,10 +96,10 @@ type SignalCheckOutputEvent struct {
 	EventType string `json:"eventType"`
 
 	// Price is the floating point number for the given asset pair on the given exchange at the time of this event.
-	Price JsonFloat64 `json:"price"`
+	Price JsonFloat64 `json:"price,omitempty"`
 
 	// At is the ISO8601 datetime given by the exchange API at which this event happened.
-	At string `json:"at"`
+	At string `json:"at,omitempty"`
 }
 
 // SignalCheckOutput is the result of the signal checking function.

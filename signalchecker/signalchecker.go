@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/marianogappa/signal-checker/binance"
+	"github.com/marianogappa/signal-checker/ftx"
 	"github.com/marianogappa/signal-checker/profitcalculator"
 	"github.com/marianogappa/signal-checker/types"
 )
@@ -40,6 +41,8 @@ func CheckSignal(input types.SignalCheckInput) (types.SignalCheckOutput, error) 
 	switch input.Exchange {
 	case types.BINANCE:
 		candlestickIterator = binance.BuildCandlestickIterator(input)
+	case types.FTX:
+		candlestickIterator = ftx.BuildCandlestickIterator(input)
 	}
 
 	return doCheckSignal(input, candlestickIterator)
@@ -65,8 +68,8 @@ func validateInput(input types.SignalCheckInput) (types.SignalCheckOutput, error
 	if input.Exchange == "" {
 		input.Exchange = "binance"
 	}
-	if input.Exchange != "binance" {
-		return invalidateWith("At the moment the only valid exchange is 'binance'", input)
+	if input.Exchange != "binance" && input.Exchange != "ftx" {
+		return invalidateWith("At the moment the only valid exchanges are 'binance' and 'ftx'", input)
 	}
 	if input.InitialISO3601 == "" {
 		return invalidateWith("initialISO3601 is required", input)

@@ -35,7 +35,7 @@ func (p *ProfitCalculator) ApplyEvent(event types.SignalCheckOutputEvent) float6
 		p.putIn = 1.0
 		p.tookOut = 0.0
 		p.price = float64(event.Price)
-	case types.STOPPED_LOSS, types.INVALIDATED, types.FINISHED_DATASET:
+	case types.STOPPED_LOSS, types.INVALIDATED:
 		p.putIn *= float64(event.Price) / p.price
 		p.tookOut += p.putIn
 		p.putIn = 0

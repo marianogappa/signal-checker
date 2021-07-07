@@ -46,6 +46,7 @@ func serveCheck(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	inputStr := os.Args[1]
 	if inputStr == "serve" {
 		serve(os.Args)
