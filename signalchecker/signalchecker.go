@@ -25,6 +25,7 @@ import (
 	"github.com/marianogappa/signal-checker/coinbase"
 	"github.com/marianogappa/signal-checker/ftx"
 	"github.com/marianogappa/signal-checker/huobi"
+	"github.com/marianogappa/signal-checker/kraken"
 	"github.com/marianogappa/signal-checker/profitcalculator"
 	"github.com/marianogappa/signal-checker/types"
 )
@@ -49,6 +50,8 @@ func CheckSignal(input types.SignalCheckInput) (types.SignalCheckOutput, error) 
 		candlestickIterator = coinbase.BuildCandlestickIterator(input)
 	case types.HUOBI:
 		candlestickIterator = huobi.BuildCandlestickIterator(input)
+	case types.KRAKEN:
+		candlestickIterator = kraken.BuildCandlestickIterator(input)
 	}
 
 	return doCheckSignal(input, candlestickIterator)
@@ -74,8 +77,8 @@ func validateInput(input types.SignalCheckInput) (types.SignalCheckOutput, error
 	if input.Exchange == "" {
 		input.Exchange = "binance"
 	}
-	if input.Exchange != "binance" && input.Exchange != "ftx" && input.Exchange != "coinbase" && input.Exchange != "huobi" {
-		return invalidateWith("At the moment the only valid exchanges are 'binance', 'ftx', 'coinbase' and 'huobi'", input)
+	if input.Exchange != "binance" && input.Exchange != "ftx" && input.Exchange != "coinbase" && input.Exchange != "huobi" && input.Exchange != "kraken" {
+		return invalidateWith("The only valid exchanges are 'binance', 'ftx', 'coinbase', 'huobi' and 'kraken'", input)
 	}
 	if input.InitialISO3601 == "" {
 		return invalidateWith("initialISO3601 is required", input)

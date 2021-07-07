@@ -15,7 +15,7 @@ import (
 // - Durations are in seconds.
 // - All prices are floating point numbers for the given asset pair on the given exchange.
 type SignalCheckInput struct {
-	// Exchange must be "binance" or "ftx"; default is "binance"
+	// Exchange must be one of ['binance', 'ftx', 'coinbase', 'huobi', 'kraken']; default is 'binance'
 	Exchange string `json:"exchange"`
 
 	// BaseAsset is LTC in LTCUSDT
@@ -90,6 +90,7 @@ const (
 	FTX      = "ftx"
 	COINBASE = "coinbase"
 	HUOBI    = "huobi"
+	KRAKEN   = "kraken"
 )
 
 // SignalCheckOutputEvent is an event that happened upon checking a signal.
