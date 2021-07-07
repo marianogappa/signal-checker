@@ -257,13 +257,13 @@ func getKlines(baseAsset string, quoteAsset string, startTimeMillis int) (klines
 
 	if resp.StatusCode != http.StatusOK {
 		err := fmt.Errorf("binance returned %v status code", resp.StatusCode)
-		return klinesResult{httpStatus: resp.StatusCode, err: err}, err
+		return klinesResult{httpStatus: 500, err: err}, err
 	}
 
 	byts, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		err := fmt.Errorf("binance returned broken body response! Was: %v", string(byts))
-		return klinesResult{err: err, httpStatus: resp.StatusCode}, err
+		return klinesResult{err: err, httpStatus: 500}, err
 	}
 
 	maybeErrorResponse := errorResponse{}
@@ -273,7 +273,7 @@ func getKlines(baseAsset string, quoteAsset string, startTimeMillis int) (klines
 		return klinesResult{
 			binanceErrorCode:    maybeErrorResponse.Code,
 			binanceErrorMessage: maybeErrorResponse.Msg,
-			httpStatus:          resp.StatusCode,
+			httpStatus:          500,
 		}, err
 	}
 
@@ -281,7 +281,7 @@ func getKlines(baseAsset string, quoteAsset string, startTimeMillis int) (klines
 	err = json.Unmarshal(byts, &maybeResponse.ResponseCandlesticks)
 	if err != nil {
 		err := fmt.Errorf("binance returned invalid JSON response! Was: %v", string(byts))
-		return klinesResult{err: err, httpStatus: resp.StatusCode}, err
+		return klinesResult{err: err, httpStatus: 500}, err
 	}
 
 	candlesticks, err := maybeResponse.toCandlesticks()
@@ -294,6 +294,6 @@ func getKlines(baseAsset string, quoteAsset string, startTimeMillis int) (klines
 
 	return klinesResult{
 		candlesticks: candlesticks,
-		httpStatus:   resp.StatusCode,
+		httpStatus:   200,
 	}, nil
 }
