@@ -8,11 +8,12 @@ import (
 )
 
 type ProfitCalculator struct {
-	input       types.SignalCheckInput
-	putIn       float64
-	price       float64
-	tookOut     float64
-	accumRatios []float64
+	input             types.SignalCheckInput
+	putIn             float64
+	price             float64
+	tookOut           float64
+	accumRatios       []float64
+	appliedEventCount int
 }
 
 func NewProfitCalculator(input types.SignalCheckInput) ProfitCalculator {
@@ -30,12 +31,16 @@ func NewProfitCalculator(input types.SignalCheckInput) ProfitCalculator {
 }
 
 func (p *ProfitCalculator) ApplyEvent(event types.SignalCheckOutputEvent) float64 {
+	p.appliedEventCount++
 	switch event.EventType {
 	case types.ENTERED:
 		p.putIn = 1.0
 		p.tookOut = 0.0
 		p.price = float64(event.Price)
 	case types.STOPPED_LOSS, types.INVALIDATED:
+		if p.appliedEventCount == 1 {
+			return 0.0
+		}
 		p.putIn *= float64(event.Price) / p.price
 		p.tookOut += p.putIn
 		p.putIn = 0
