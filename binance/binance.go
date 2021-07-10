@@ -26,7 +26,7 @@ type binanceCandlestickIterator struct {
 
 func newBinanceCandlestickIterator(input types.SignalCheckInput) *binanceCandlestickIterator {
 	// N.B. already validated
-	initial, _ := time.Parse(time.RFC3339, input.InitialISO3601)
+	initial, _ := time.Parse(time.RFC3339, input.InitialISO8601)
 	return &binanceCandlestickIterator{input: input, requestFromMillis: int(initial.Unix()) * 1000}
 }
 

@@ -36,20 +36,23 @@ type SignalCheckInput struct {
 	// StopLoss is the price at which to stop loss (-1 for no stop loss)
 	StopLoss JsonFloat64 `json:"stopLoss"`
 
-	// InitialISO3601 is the ISO3601 datetime at which the signal becomes valid (e.g. 2021-07-04T14:14:18+00:00)
-	InitialISO3601 string `json:"initialISO3601"`
+	// InitialISO8601 is the ISO3601 datetime at which the signal becomes valid (e.g. 2021-07-04T14:14:18+00:00)
+	InitialISO8601 string `json:"initialISO8601"`
 
-	// InvalidateISO3601 is the ISO3601 datetime at which the signal becomes invalid (empty for up to now)
+	// InvalidateISO8601 is the ISO3601 datetime at which the signal becomes invalid (empty for up to now)
 	// (e.g. 2021-07-04T14:14:18+00:00)
 	// Considering a signal invalid, if entered, means "selling", either at a profit or at a loss.
-	InvalidateISO3601 string `json:"invalidateISO3601"`
+	InvalidateISO8601 string `json:"invalidateISO8601"`
 
-	// InvalidateAfterSeconds is the number of seconds from InitialISO3601 at which to consider the signal invalid.
+	// InvalidateAfterSeconds is the number of seconds from InitialISO8601 at which to consider the signal invalid.
 	// Considering a signal invalid, if entered, means "selling", either at a profit or at a loss.
 	InvalidateAfterSeconds int `json:"invalidateAfterSeconds"`
 
 	// ReturnLogs decides whether to return logs on the output.
 	ReturnLogs bool `json:"returnLogs"`
+
+	// Debug decides whether to turn debug mode on, which means verbose stderr output.
+	Debug bool `json:"debug"`
 
 	// TakeProfitRatios is used to calculate profitRatio, that is, how much would have been the profit/loss of
 	// following the signal.
@@ -75,7 +78,6 @@ type SignalCheckInput struct {
 	// IfTP4StopAtTP3 is a boolean that, if set, changes the stop loss to TP3 if TP4 is reached.
 	IfTP4StopAtTP3 bool `json:"ifTP4StopAtTP3"`
 
-	// TODO for now only one request to Binance
 	// TODO add invalidateIfTPBeforeEntering
 }
 
@@ -151,10 +153,10 @@ type SignalCheckOutput struct {
 	HttpStatus int `json:"httpStatus"`
 
 	// ErrorMessage returns a human-readable description of the error that occurred while checking the signal.
-	ErrorMessage string `json:"errorMessage"`
+	ErrorMessage string `json:"errorMessage,omitempty"`
 
 	// Logs returns logging information to debug the results. Logs is only returned when input.returnLogs is set.
-	Logs []string `json:"logs"`
+	Logs []string `json:"logs,omitempty"`
 }
 
 // Candlestick is the generic struct for candlestick data for all supported exchanges.
@@ -176,6 +178,27 @@ type Candlestick struct {
 
 	// Volume is the traded volume in base asset during this candlestick.
 	Volume JsonFloat64 `json:"v"`
+}
+
+// ToTicks converts a Candlestick to two Ticks. Lowest value is put first, because since there's no way to tell
+// which one happened first, this library chooses to be pessimistic.
+func (c Candlestick) ToTicks() []Tick {
+	return []Tick{
+		{Timestamp: c.Timestamp, Volume: c.Volume, Price: c.LowestPrice},
+		{Timestamp: c.Timestamp, Volume: c.Volume, Price: c.HighestPrice},
+	}
+}
+
+// Tick is either one side of the candlestick, or the return type of a Ticker.
+type Tick struct {
+	// Timestamp is the UNIX timestamp (i.e. seconds since UTC Epoch) at which tick happened.
+	Timestamp int `json:"t"`
+
+	// Price is the price of this tick.
+	Price JsonFloat64 `json:"p"`
+
+	// Volume is the traded volume in base asset during this tick.
+	Volume JsonFloat64 `json:"v,omitempty"`
 }
 
 var ErrOutOfCandlesticks = errors.New("exchange ran out of candlesticks")

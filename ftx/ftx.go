@@ -25,7 +25,7 @@ type ftxCandlestickIterator struct {
 
 func newFTXCandlestickIterator(input types.SignalCheckInput) *ftxCandlestickIterator {
 	// N.B. already validated
-	initial, _ := time.Parse(time.RFC3339, input.InitialISO3601)
+	initial, _ := time.Parse(time.RFC3339, input.InitialISO8601)
 	return &ftxCandlestickIterator{input: input, requestFromSecs: int(initial.Unix())}
 }
 

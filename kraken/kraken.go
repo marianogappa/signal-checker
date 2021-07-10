@@ -27,7 +27,7 @@ type krakenCandlestickIterator struct {
 
 func newKrakenCandlestickIterator(input types.SignalCheckInput) *krakenCandlestickIterator {
 	// N.B. already validated
-	initial, _ := time.Parse(time.RFC3339, input.InitialISO3601)
+	initial, _ := time.Parse(time.RFC3339, input.InitialISO8601)
 	return &krakenCandlestickIterator{input: input, requestFromSecs: int(initial.Unix())}
 }
 

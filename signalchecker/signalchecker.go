@@ -15,10 +15,8 @@
 package signalchecker
 
 import (
-	"errors"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/marianogappa/signal-checker/binance"
@@ -57,54 +55,16 @@ func CheckSignal(input types.SignalCheckInput) (types.SignalCheckOutput, error) 
 		candlestickIterator = kucoin.BuildCandlestickIterator(input)
 	}
 
-	return doCheckSignal(input, candlestickIterator)
-}
-
-func invalidateWith(msg string, input types.SignalCheckInput) (types.SignalCheckOutput, error) {
-	err := errors.New(msg)
-	return types.SignalCheckOutput{IsError: true, HttpStatus: 400, ErrorMessage: err.Error(), Input: input}, err
-}
-
-func sum(ss []types.JsonFloat64) float64 {
-	sum := 0.0
-	for _, s := range ss {
-		sum += float64(s)
-	}
-	return sum
-}
-
-func validateInput(input types.SignalCheckInput) (types.SignalCheckOutput, error) {
-	input.Exchange = strings.ToLower(input.Exchange)
-	input.BaseAsset = strings.ToUpper(input.BaseAsset)
-	input.QuoteAsset = strings.ToUpper(input.QuoteAsset)
-	if input.Exchange == "" {
-		input.Exchange = "binance"
-	}
-	if input.Exchange != "binance" && input.Exchange != "ftx" && input.Exchange != "coinbase" && input.Exchange != "huobi" && input.Exchange != "kraken" && input.Exchange != "kucoin" {
-		return invalidateWith("The only valid exchanges are 'binance', 'ftx', 'coinbase', 'huobi', 'kraken' and 'kucoin'", input)
-	}
-	if input.InitialISO3601 == "" {
-		return invalidateWith("initialISO3601 is required", input)
-	}
-	if _, err := time.Parse(time.RFC3339, input.InitialISO3601); err != nil {
-		return invalidateWith("initialISO3601 is formatted incorrectly, should be ISO3601 e.g. 2021-07-04T14:14:18+00:00", input)
-	}
-	if _, err := time.Parse(time.RFC3339, input.InvalidateISO3601); input.InvalidateISO3601 != "" && err != nil {
-		return invalidateWith("invalidateISO3601 is formatted incorrectly, should be ISO3601 e.g. 2021-07-04T14:14:18+00:00", input)
-	}
-	if len(input.TakeProfitRatios) > 0 && sum(input.TakeProfitRatios) != 1.0 {
-		return invalidateWith("takeProfitRatios must add up to 1 (but it does not need to match the takeProfits length)", input)
-	}
-	return types.SignalCheckOutput{Input: input}, nil
+	return doCheckSignal(input, buildTickIterator(candlestickIterator))
 }
 
 func resolveInvalidAt(input types.SignalCheckInput) (time.Time, bool) {
 	// N.B. already validated
-	invalidate, _ := time.Parse(time.RFC3339, input.InvalidateISO3601)
-	initial, _ := time.Parse(time.RFC3339, input.InitialISO3601)
+	invalidate, _ := time.Parse(time.RFC3339, input.InvalidateISO8601)
+	initial, _ := time.Parse(time.RFC3339, input.InitialISO8601)
 
 	invalidAts := []time.Time{}
-	if input.InvalidateISO3601 != "" {
+	if input.InvalidateISO8601 != "" {
 		invalidAts = append(invalidAts, invalidate)
 	}
 	if input.InvalidateAfterSeconds > 0 {
@@ -122,113 +82,132 @@ func resolveInvalidAt(input types.SignalCheckInput) (time.Time, bool) {
 	return invalidAt, true
 }
 
-func doCheckSignal(input types.SignalCheckInput, nextCandlestick func() (types.Candlestick, error)) (types.SignalCheckOutput, error) {
+type checkSignalState struct {
+	input                types.SignalCheckInput
+	profitCalculator     profitcalculator.ProfitCalculator
+	first                bool
+	entered              bool
+	reachedStopLoss      bool
+	highestTakeProfit    int
+	firstCandleOpenPrice types.JsonFloat64
+	firstCandleAt        string
+	invalidAt            time.Time
+	hasInvalidAt         bool
+	events               []types.SignalCheckOutputEvent
+	stopLoss             types.JsonFloat64
+	initialTime          time.Time
+	priceCheckpoint      float64
+	isEnded              bool
+}
+
+func newChecker(input types.SignalCheckInput) *checkSignalState {
+	invalidAt, hasInvalidAt := resolveInvalidAt(input)
+	initialTime, _ := time.Parse(time.RFC3339, input.InitialISO8601)
+	return &checkSignalState{
+		input:            input,
+		profitCalculator: profitcalculator.NewProfitCalculator(input),
+		first:            true,
+		invalidAt:        invalidAt,
+		hasInvalidAt:     hasInvalidAt,
+		stopLoss:         input.StopLoss,
+		initialTime:      initialTime,
+		priceCheckpoint:  0.0,
+	}
+}
+
+// N.B. appyEvent returns "isEnded" boolean, to decide whether to continue.
+func (s *checkSignalState) applyEvent(eventType string, tick types.Tick) bool {
+	event := types.SignalCheckOutputEvent{EventType: eventType}
+	switch eventType {
+	case types.FINISHED_DATASET:
+	default:
+		event.At = time.Unix(int64(tick.Timestamp), 0).UTC().Format(time.RFC3339)
+		event.Price = tick.Price
+	}
+	s.events = append(s.events, event)
+	s.profitCalculator.ApplyEvent(event)
+	s.isEnded = eventType == types.FINISHED_DATASET || eventType == types.STOPPED_LOSS || s.profitCalculator.IsFinished()
+	return s.isEnded
+}
+
+func (s *checkSignalState) applyTick(tick types.Tick, err error) (bool, error) {
+	if err == types.ErrOutOfCandlesticks {
+		return s.applyEvent(types.FINISHED_DATASET, tick), err
+	}
+	if err != nil {
+		return true, err
+	}
+	tickTime := time.Unix(int64(tick.Timestamp), 0)
+	if tickTime.Before(s.initialTime) {
+		return false, nil
+	}
+	if s.first {
+		s.first = false
+		s.firstCandleOpenPrice = tick.Price
+		s.firstCandleAt = tickTime.UTC().Format(time.RFC3339)
+	}
+	if s.hasInvalidAt && (tickTime.After(s.invalidAt) || tickTime.Equal(s.invalidAt)) {
+		return s.applyEvent(types.INVALIDATED, tick), nil
+	}
+	if !s.entered && tick.Price >= s.input.EnterRangeLow && tick.Price <= s.input.EnterRangeHigh {
+		s.entered = true
+		return s.applyEvent(types.ENTERED, tick), nil
+	}
+	if s.entered && tick.Price <= s.stopLoss {
+		s.reachedStopLoss = true
+		return s.applyEvent(types.STOPPED_LOSS, tick), nil
+	}
+	if s.entered && s.highestTakeProfit < len(s.input.TakeProfits) && tick.Price >= s.input.TakeProfits[s.highestTakeProfit] {
+		for i := len(s.input.TakeProfits) - 1; i >= s.highestTakeProfit; i-- {
+			if tick.Price < s.input.TakeProfits[i] {
+				continue
+			}
+			s.highestTakeProfit = i + 1
+			break
+		}
+		s.applyEvent(fmt.Sprintf("%v%v", types.TAKEN_PROFIT_, s.highestTakeProfit), tick)
+		if s.isEnded || s.highestTakeProfit == len(s.input.TakeProfits) {
+			return true, nil
+		}
+		if (s.highestTakeProfit == 1 && s.input.IfTP1StopAtEntry) ||
+			(s.highestTakeProfit == 2 && s.input.IfTP2StopAtTP1) ||
+			(s.highestTakeProfit == 3 && s.input.IfTP3StopAtTP2) ||
+			(s.highestTakeProfit == 4 && s.input.IfTP4StopAtTP3) {
+			s.stopLoss = types.JsonFloat64(s.priceCheckpoint)
+		}
+		s.priceCheckpoint = float64(tick.Price)
+	}
+	return false, nil
+}
+
+func doCheckSignal(input types.SignalCheckInput, nextTick func() (types.Tick, error)) (types.SignalCheckOutput, error) {
 	var (
-		profitCalculator        = profitcalculator.NewProfitCalculator(input)
-		first                   = true
-		invalidAt, hasInvalidAt = resolveInvalidAt(input)
-		events                  = []types.SignalCheckOutputEvent{}
-		stopLoss                = input.StopLoss
-		err                     error
-		candlestick             types.Candlestick
-		initialTime, _          = time.Parse(time.RFC3339, input.InitialISO3601)
-		output                  = types.SignalCheckOutput{
-			Input:      input,
-			HttpStatus: 200,
-		}
-		// N.B. this is used to move the stopLoss to previous step (e.g. enter, TP1, ...) as the signal enters new TPs
-		priceCheckpoint = 0.0
+		checker = newChecker(input)
+		err     error
+		isEnded bool
 	)
-out:
 	for {
-		candlestick, err = nextCandlestick()
-		if err == types.ErrOutOfCandlesticks {
-			event := types.SignalCheckOutputEvent{EventType: types.FINISHED_DATASET}
-			events = append(events, event)
-			profitCalculator.ApplyEvent(event)
-			break out
-		}
-		if err != nil {
-			output.IsError = true
-			output.HttpStatus = 500
-			output.ErrorMessage = err.Error()
-			break out
-		}
-		var (
-			prices = []types.JsonFloat64{types.JsonFloat64(candlestick.LowestPrice), types.JsonFloat64(candlestick.HighestPrice)}
-			at     = time.Unix(int64(candlestick.Timestamp), 0)
-			atStr  = at.Format(time.RFC3339)
-		)
-		if at.Before(initialTime) {
-			continue
-		}
-		for _, price := range prices {
-			if first {
-				first = false
-				output.FirstCandleOpenPrice = price
-				output.FirstCandleAt = atStr
-			}
-			if hasInvalidAt && (at.After(invalidAt) || at.Equal(invalidAt)) {
-				event := types.SignalCheckOutputEvent{
-					EventType: types.INVALIDATED,
-					Price:     price,
-					At:        atStr,
-				}
-				events = append(events, event)
-				profitCalculator.ApplyEvent(event)
-				break out
-			}
-			if !output.Entered && price >= input.EnterRangeLow && price <= input.EnterRangeHigh {
-				output.Entered = true
-				event := types.SignalCheckOutputEvent{
-					EventType: types.ENTERED,
-					Price:     price,
-					At:        atStr,
-				}
-				events = append(events, event)
-				profitCalculator.ApplyEvent(event)
-			}
-			if output.Entered && price <= stopLoss {
-				event := types.SignalCheckOutputEvent{
-					EventType: types.STOPPED_LOSS,
-					Price:     price,
-					At:        atStr,
-				}
-				events = append(events, event)
-				profitCalculator.ApplyEvent(event)
-				output.ReachedStopLoss = true
-				break out
-			}
-			if output.Entered && output.HighestTakeProfit < len(input.TakeProfits) && price >= input.TakeProfits[output.HighestTakeProfit] {
-				var event types.SignalCheckOutputEvent
-				for i := len(input.TakeProfits) - 1; i >= output.HighestTakeProfit; i-- {
-					if price < input.TakeProfits[i] {
-						continue
-					}
-					output.HighestTakeProfit = i + 1
-					break
-				}
-				event = types.SignalCheckOutputEvent{
-					EventType: fmt.Sprintf("%v%v", types.TAKEN_PROFIT_, output.HighestTakeProfit),
-					Price:     price,
-					At:        atStr,
-				}
-				events = append(events, event)
-				profitCalculator.ApplyEvent(event)
-				if output.HighestTakeProfit == len(input.TakeProfits) || profitCalculator.IsFinished() {
-					break out
-				}
-				if (output.HighestTakeProfit == 1 && input.IfTP1StopAtEntry) ||
-					(output.HighestTakeProfit == 2 && input.IfTP2StopAtTP1) ||
-					(output.HighestTakeProfit == 3 && input.IfTP3StopAtTP2) ||
-					(output.HighestTakeProfit == 4 && input.IfTP4StopAtTP3) {
-					stopLoss = types.JsonFloat64(priceCheckpoint)
-				}
-				priceCheckpoint = float64(event.Price)
-			}
+		if isEnded, err = checker.applyTick(nextTick()); isEnded || err != nil {
+			break
 		}
 	}
-	output.ProfitRatio = types.JsonFloat64(profitCalculator.CalculateTakeProfitRatio())
-	output.Events = events
-	return output, err
+	output := types.SignalCheckOutput{
+		Input:      input,
+		HttpStatus: 200,
+	}
+	if err != nil {
+		output.IsError = true
+		output.HttpStatus = 500
+		output.ErrorMessage = err.Error()
+	}
+	return types.SignalCheckOutput{
+		Events:               checker.events,
+		Input:                input,
+		Entered:              checker.entered,
+		FirstCandleOpenPrice: checker.firstCandleOpenPrice,
+		FirstCandleAt:        checker.firstCandleAt,
+		HighestTakeProfit:    checker.highestTakeProfit,
+		ReachedStopLoss:      checker.reachedStopLoss,
+		ProfitRatio:          types.JsonFloat64(checker.profitCalculator.CalculateTakeProfitRatio()),
+	}, err
 }

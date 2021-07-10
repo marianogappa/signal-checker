@@ -26,7 +26,7 @@ type kucoinCandlestickIterator struct {
 
 func newKucoinCandlestickIterator(input types.SignalCheckInput) *kucoinCandlestickIterator {
 	// N.B. already validated
-	initial, _ := time.Parse(time.RFC3339, input.InitialISO3601)
+	initial, _ := time.Parse(time.RFC3339, input.InitialISO8601)
 	return &kucoinCandlestickIterator{input: input, requestFromSecs: int(initial.Unix())}
 }
 
