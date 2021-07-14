@@ -1,10 +1,12 @@
-// The types package contains the input and output types of the signal checking function.
-package types
+// The common package contains the input and output types of the signal checking function.
+package common
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"strconv"
+	"time"
 )
 
 // SignalCheckInput is the input to the signal checking function.
@@ -37,12 +39,12 @@ type SignalCheckInput struct {
 	StopLoss JsonFloat64 `json:"stopLoss"`
 
 	// InitialISO8601 is the ISO3601 datetime at which the signal becomes valid (e.g. 2021-07-04T14:14:18+00:00)
-	InitialISO8601 string `json:"initialISO8601"`
+	InitialISO8601 ISO8601 `json:"initialISO8601"`
 
 	// InvalidateISO8601 is the ISO3601 datetime at which the signal becomes invalid (empty for up to now)
 	// (e.g. 2021-07-04T14:14:18+00:00)
 	// Considering a signal invalid, if entered, means "selling", either at a profit or at a loss.
-	InvalidateISO8601 string `json:"invalidateISO8601"`
+	InvalidateISO8601 ISO8601 `json:"invalidateISO8601"`
 
 	// InvalidateAfterSeconds is the number of seconds from InitialISO8601 at which to consider the signal invalid.
 	// Considering a signal invalid, if entered, means "selling", either at a profit or at a loss.
@@ -105,7 +107,29 @@ type SignalCheckOutputEvent struct {
 	Price JsonFloat64 `json:"price,omitempty"`
 
 	// At is the ISO8601 datetime given by the exchange API at which this event happened.
-	At string `json:"at,omitempty"`
+	At ISO8601 `json:"at,omitempty"`
+}
+
+type ISO8601 string
+
+func (t ISO8601) Time() (time.Time, error) {
+	return time.Parse(time.RFC3339, string(t))
+}
+
+func (t ISO8601) Seconds() (int, error) {
+	tm, err := t.Time()
+	if err != nil {
+		return 0, fmt.Errorf("failed to convert %v to seconds because %v", string(t), err.Error())
+	}
+	return int(tm.Unix()), nil
+}
+
+func (t ISO8601) Millis() (int, error) {
+	tm, err := t.Seconds()
+	if err != nil {
+		return 0, err
+	}
+	return tm * 100, nil
 }
 
 // SignalCheckOutput is the result of the signal checking function.
@@ -157,6 +181,8 @@ type SignalCheckOutput struct {
 
 	// Logs returns logging information to debug the results. Logs is only returned when input.returnLogs is set.
 	Logs []string `json:"logs,omitempty"`
+
+	MaxEnterUSD JsonFloat64 `json:"maxEnterUSD,omitempty"`
 }
 
 // Candlestick is the generic struct for candlestick data for all supported exchanges.
@@ -178,14 +204,17 @@ type Candlestick struct {
 
 	// Volume is the traded volume in base asset during this candlestick.
 	Volume JsonFloat64 `json:"v"`
+
+	// NumberOfTrades is the total number of filled order book orders in this candlestick.
+	NumberOfTrades int `json:"n,omitempty"`
 }
 
 // ToTicks converts a Candlestick to two Ticks. Lowest value is put first, because since there's no way to tell
 // which one happened first, this library chooses to be pessimistic.
 func (c Candlestick) ToTicks() []Tick {
 	return []Tick{
-		{Timestamp: c.Timestamp, Volume: c.Volume, Price: c.LowestPrice},
-		{Timestamp: c.Timestamp, Volume: c.Volume, Price: c.HighestPrice},
+		{Timestamp: c.Timestamp, Volume: c.Volume, NumberOfTrades: c.NumberOfTrades, Price: c.LowestPrice},
+		{Timestamp: c.Timestamp, Volume: c.Volume, NumberOfTrades: c.NumberOfTrades, Price: c.HighestPrice},
 	}
 }
 
@@ -197,11 +226,31 @@ type Tick struct {
 	// Price is the price of this tick.
 	Price JsonFloat64 `json:"p"`
 
-	// Volume is the traded volume in base asset during this tick.
+	// Volume (may not exist) is the traded volume in base asset during the candlestick of this tick.
 	Volume JsonFloat64 `json:"v,omitempty"`
+
+	// NumberOfTrades (may not exist) is the total number of filled order book orders in the candlestick of this tick.
+	NumberOfTrades int `json:"n,omitempty"`
 }
 
-var ErrOutOfCandlesticks = errors.New("exchange ran out of candlesticks")
+// Trade is an order filled on an exchange for some price & quantity of a base asset.
+type Trade struct {
+	// BaseAssetPrice is the price of the base asset at which this trade was filled.
+	BaseAssetPrice JsonFloat64
+
+	// BaseAssetQuantity is the quantity of the base asset at which this trade was filled.
+	BaseAssetQuantity JsonFloat64
+
+	// Timestamp is the UNIX timestamp (i.e. seconds since UTC Epoch) at which this trade was filled.
+	Timestamp int `json:"t"`
+}
+
+var (
+	ErrOutOfCandlesticks = errors.New("exchange ran out of candlesticks")
+	ErrOutOfTrades       = errors.New("exchange ran out of trades")
+	ErrInvalidMarketPair = errors.New("market pair does not exist on exchange")
+	ErrRateLimit         = errors.New("exchange asked us to enhance our calm")
+)
 
 type JsonFloat64 float64
 
@@ -232,4 +281,9 @@ func (jf JsonFloat64) MarshalJSON() ([]byte, error) {
 		}
 	}
 	return b, nil
+}
+
+type Exchange interface {
+	BuildCandlestickIterator(baseAsset, quoteAsset string, initialISO8601 ISO8601) *CandlestickIterator
+	BuildTradeIterator(baseAsset, quoteAsset string, initialISO8601 ISO8601) *TradeIterator
 }

@@ -33,11 +33,11 @@ $ curl "localhost:8080/run" -d '<JSON input data>'
 ```go
 import (
 	"github.com/marianogappa/signal-checker/signalchecker"
-	"github.com/marianogappa/signal-checker/types"
+	"github.com/marianogappa/signal-checker/common"
 )
 
 func main() {
-        input := types.SignalCheckInput{<input data>}
+        input := common.SignalCheckInput{<input data>}
         output, _ := signalchecker.CheckSignal(input)
   	byts, err := json.MarshalIndent(output, "", "  ")
 	if err != nil {

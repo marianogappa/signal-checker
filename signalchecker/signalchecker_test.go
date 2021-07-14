@@ -4,15 +4,15 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/marianogappa/signal-checker/types"
+	"github.com/marianogappa/signal-checker/common"
 )
 
 func TestSignalChecker(t *testing.T) {
 	type test struct {
 		name         string
-		input        types.SignalCheckInput
-		candlesticks []types.Candlestick
-		expected     types.SignalCheckOutput
+		input        common.SignalCheckInput
+		candlesticks []common.Candlestick
+		expected     common.SignalCheckOutput
 	}
 
 	startISO8601 := "2021-07-04T14:14:18Z"
@@ -23,27 +23,27 @@ func TestSignalChecker(t *testing.T) {
 	tss := []test{
 		{
 			name: "Does not enter",
-			input: types.SignalCheckInput{
+			input: common.SignalCheckInput{
 				EnterRangeLow:          f(1.0),
 				EnterRangeHigh:         f(2.0),
 				StopLoss:               f(0.1),
 				InitialISO8601:         startISO8601,
 				InvalidateISO8601:      "",
 				InvalidateAfterSeconds: 10,
-				TakeProfits:            []types.JsonFloat64{5.0, 6.0, 7.0},
-				TakeProfitRatios:       []types.JsonFloat64{0.5, 0.25, 0.25},
+				TakeProfits:            []common.JsonFloat64{5.0, 6.0, 7.0},
+				TakeProfitRatios:       []common.JsonFloat64{0.5, 0.25, 0.25},
 				IfTP1StopAtEntry:       false,
 				IfTP2StopAtTP1:         false,
 				IfTP3StopAtTP2:         false,
 				IfTP4StopAtTP3:         false,
 			},
-			candlesticks: []types.Candlestick{
+			candlesticks: []common.Candlestick{
 				{Timestamp: startTs + 0, LowestPrice: f(0.2), HighestPrice: f(0.2), Volume: f(1.0)},
 				{Timestamp: startTs + 1, LowestPrice: f(0.2), HighestPrice: f(0.2), Volume: f(1.0)},
 				{Timestamp: startTs + 2, LowestPrice: f(0.3), HighestPrice: f(0.3), Volume: f(1.0)},
 			},
-			expected: types.SignalCheckOutput{
-				Events:               []types.SignalCheckOutputEvent{{EventType: types.FINISHED_DATASET}},
+			expected: common.SignalCheckOutput{
+				Events:               []common.SignalCheckOutputEvent{{EventType: common.FINISHED_DATASET}},
 				Entered:              false,
 				FirstCandleOpenPrice: f(0.2),
 				FirstCandleAt:        startISO8601,
@@ -55,29 +55,29 @@ func TestSignalChecker(t *testing.T) {
 		},
 		{
 			name: "Enters",
-			input: types.SignalCheckInput{
+			input: common.SignalCheckInput{
 				EnterRangeLow:          f(1.0),
 				EnterRangeHigh:         f(2.0),
 				StopLoss:               f(0.1),
 				InitialISO8601:         startISO8601,
 				InvalidateISO8601:      "",
 				InvalidateAfterSeconds: 10,
-				TakeProfits:            []types.JsonFloat64{5.0, 6.0, 7.0},
-				TakeProfitRatios:       []types.JsonFloat64{0.5, 0.25, 0.25},
+				TakeProfits:            []common.JsonFloat64{5.0, 6.0, 7.0},
+				TakeProfitRatios:       []common.JsonFloat64{0.5, 0.25, 0.25},
 				IfTP1StopAtEntry:       false,
 				IfTP2StopAtTP1:         false,
 				IfTP3StopAtTP2:         false,
 				IfTP4StopAtTP3:         false,
 			},
-			candlesticks: []types.Candlestick{
+			candlesticks: []common.Candlestick{
 				{Timestamp: startTs + 0, LowestPrice: f(0.2), HighestPrice: f(0.2), Volume: f(1.0)},
 				{Timestamp: startTs + 1, LowestPrice: f(1.0), HighestPrice: f(1.0), Volume: f(1.0)},
 				{Timestamp: startTs + 2, LowestPrice: f(0.3), HighestPrice: f(0.3), Volume: f(1.0)},
 			},
-			expected: types.SignalCheckOutput{
-				Events: []types.SignalCheckOutputEvent{
-					{EventType: types.ENTERED, At: tick2, Price: f(1.0)},
-					{EventType: types.FINISHED_DATASET},
+			expected: common.SignalCheckOutput{
+				Events: []common.SignalCheckOutputEvent{
+					{EventType: common.ENTERED, At: tick2, Price: f(1.0)},
+					{EventType: common.FINISHED_DATASET},
 				},
 				Entered:              true,
 				FirstCandleOpenPrice: f(0.2),
@@ -90,29 +90,29 @@ func TestSignalChecker(t *testing.T) {
 		},
 		{
 			name: "Stops losses",
-			input: types.SignalCheckInput{
+			input: common.SignalCheckInput{
 				EnterRangeLow:          f(1.0),
 				EnterRangeHigh:         f(2.0),
 				StopLoss:               f(0.1),
 				InitialISO8601:         startISO8601,
 				InvalidateISO8601:      "",
 				InvalidateAfterSeconds: 10,
-				TakeProfits:            []types.JsonFloat64{5.0, 6.0, 7.0},
-				TakeProfitRatios:       []types.JsonFloat64{0.5, 0.25, 0.25},
+				TakeProfits:            []common.JsonFloat64{5.0, 6.0, 7.0},
+				TakeProfitRatios:       []common.JsonFloat64{0.5, 0.25, 0.25},
 				IfTP1StopAtEntry:       false,
 				IfTP2StopAtTP1:         false,
 				IfTP3StopAtTP2:         false,
 				IfTP4StopAtTP3:         false,
 			},
-			candlesticks: []types.Candlestick{
+			candlesticks: []common.Candlestick{
 				{Timestamp: startTs + 0, LowestPrice: f(0.2), HighestPrice: f(0.2), Volume: f(1.0)},
 				{Timestamp: startTs + 1, LowestPrice: f(1.0), HighestPrice: f(1.0), Volume: f(1.0)},
 				{Timestamp: startTs + 2, LowestPrice: f(0.1), HighestPrice: f(0.1), Volume: f(1.0)},
 			},
-			expected: types.SignalCheckOutput{
-				Events: []types.SignalCheckOutputEvent{
-					{EventType: types.ENTERED, At: tick2, Price: f(1.0)},
-					{EventType: types.STOPPED_LOSS, At: tick3, Price: f(0.1)},
+			expected: common.SignalCheckOutput{
+				Events: []common.SignalCheckOutputEvent{
+					{EventType: common.ENTERED, At: tick2, Price: f(1.0)},
+					{EventType: common.STOPPED_LOSS, At: tick3, Price: f(0.1)},
 				},
 				Entered:              true,
 				FirstCandleOpenPrice: f(0.2),
@@ -125,30 +125,30 @@ func TestSignalChecker(t *testing.T) {
 		},
 		{
 			name: "Takes TP1",
-			input: types.SignalCheckInput{
+			input: common.SignalCheckInput{
 				EnterRangeLow:          f(1.0),
 				EnterRangeHigh:         f(2.0),
 				StopLoss:               f(0.1),
 				InitialISO8601:         startISO8601,
 				InvalidateISO8601:      "",
 				InvalidateAfterSeconds: 10,
-				TakeProfits:            []types.JsonFloat64{5.0, 6.0, 7.0},
-				TakeProfitRatios:       []types.JsonFloat64{0.5, 0.25, 0.25},
+				TakeProfits:            []common.JsonFloat64{5.0, 6.0, 7.0},
+				TakeProfitRatios:       []common.JsonFloat64{0.5, 0.25, 0.25},
 				IfTP1StopAtEntry:       false,
 				IfTP2StopAtTP1:         false,
 				IfTP3StopAtTP2:         false,
 				IfTP4StopAtTP3:         false,
 			},
-			candlesticks: []types.Candlestick{
+			candlesticks: []common.Candlestick{
 				{Timestamp: startTs + 0, LowestPrice: f(0.2), HighestPrice: f(0.2), Volume: f(1.0)},
 				{Timestamp: startTs + 1, LowestPrice: f(1.0), HighestPrice: f(1.0), Volume: f(1.0)},
 				{Timestamp: startTs + 2, LowestPrice: f(5.0), HighestPrice: f(5.0), Volume: f(1.0)},
 			},
-			expected: types.SignalCheckOutput{
-				Events: []types.SignalCheckOutputEvent{
-					{EventType: types.ENTERED, At: tick2, Price: f(1.0)},
-					{EventType: types.TAKEN_PROFIT_ + "1", At: tick3, Price: f(5.0)},
-					{EventType: types.FINISHED_DATASET},
+			expected: common.SignalCheckOutput{
+				Events: []common.SignalCheckOutputEvent{
+					{EventType: common.ENTERED, At: tick2, Price: f(1.0)},
+					{EventType: common.TAKEN_PROFIT_ + "1", At: tick3, Price: f(5.0)},
+					{EventType: common.FINISHED_DATASET},
 				},
 				Entered:              true,
 				FirstCandleOpenPrice: f(0.2),
@@ -161,31 +161,31 @@ func TestSignalChecker(t *testing.T) {
 		},
 		{
 			name: "Takes TP1 and Stops Loss",
-			input: types.SignalCheckInput{
+			input: common.SignalCheckInput{
 				EnterRangeLow:          f(1.0),
 				EnterRangeHigh:         f(2.0),
 				StopLoss:               f(0.1),
 				InitialISO8601:         startISO8601,
 				InvalidateISO8601:      "",
 				InvalidateAfterSeconds: 10,
-				TakeProfits:            []types.JsonFloat64{5.0, 6.0, 7.0},
-				TakeProfitRatios:       []types.JsonFloat64{0.5, 0.25, 0.25},
+				TakeProfits:            []common.JsonFloat64{5.0, 6.0, 7.0},
+				TakeProfitRatios:       []common.JsonFloat64{0.5, 0.25, 0.25},
 				IfTP1StopAtEntry:       false,
 				IfTP2StopAtTP1:         false,
 				IfTP3StopAtTP2:         false,
 				IfTP4StopAtTP3:         false,
 				Debug:                  true,
 			},
-			candlesticks: []types.Candlestick{
+			candlesticks: []common.Candlestick{
 				{Timestamp: startTs + 0, LowestPrice: f(1.0), HighestPrice: f(1.0), Volume: f(1.0)},
 				{Timestamp: startTs + 1, LowestPrice: f(5.0), HighestPrice: f(5.0), Volume: f(1.0)},
 				{Timestamp: startTs + 2, LowestPrice: f(0.1), HighestPrice: f(0.1), Volume: f(1.0)},
 			},
-			expected: types.SignalCheckOutput{
-				Events: []types.SignalCheckOutputEvent{
-					{EventType: types.ENTERED, At: startISO8601, Price: f(1.0)},
-					{EventType: types.TAKEN_PROFIT_ + "1", At: tick2, Price: f(5.0)},
-					{EventType: types.STOPPED_LOSS, At: tick3, Price: f(0.1)},
+			expected: common.SignalCheckOutput{
+				Events: []common.SignalCheckOutputEvent{
+					{EventType: common.ENTERED, At: startISO8601, Price: f(1.0)},
+					{EventType: common.TAKEN_PROFIT_ + "1", At: tick2, Price: f(5.0)},
+					{EventType: common.STOPPED_LOSS, At: tick3, Price: f(0.1)},
 				},
 				Entered:              true,
 				FirstCandleOpenPrice: f(1.0),
@@ -233,15 +233,15 @@ func TestSignalChecker(t *testing.T) {
 
 }
 
-func f(fl float64) types.JsonFloat64 {
-	return types.JsonFloat64(fl)
+func f(fl float64) common.JsonFloat64 {
+	return common.JsonFloat64(fl)
 }
 
-func testCandlestickIterator(cs []types.Candlestick) func() (types.Candlestick, error) {
+func testCandlestickIterator(cs []common.Candlestick) func() (common.Candlestick, error) {
 	i := 0
-	return func() (types.Candlestick, error) {
+	return func() (common.Candlestick, error) {
 		if i >= len(cs) {
-			return types.Candlestick{}, types.ErrOutOfCandlesticks
+			return common.Candlestick{}, common.ErrOutOfCandlesticks
 		}
 		i++
 		return cs[i-1], nil

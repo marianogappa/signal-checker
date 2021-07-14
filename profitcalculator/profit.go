@@ -5,11 +5,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/marianogappa/signal-checker/types"
+	"github.com/marianogappa/signal-checker/common"
 )
 
 type ProfitCalculator struct {
-	input             types.SignalCheckInput
+	input             common.SignalCheckInput
 	putIn             float64
 	price             float64
 	tookOut           float64
@@ -17,7 +17,7 @@ type ProfitCalculator struct {
 	appliedEventCount int
 }
 
-func NewProfitCalculator(input types.SignalCheckInput) ProfitCalculator {
+func NewProfitCalculator(input common.SignalCheckInput) ProfitCalculator {
 	accum := 0.0
 	accums := []float64{}
 	for i := 0; i < len(input.TakeProfits); i++ {
@@ -31,17 +31,17 @@ func NewProfitCalculator(input types.SignalCheckInput) ProfitCalculator {
 	return ProfitCalculator{input: input, accumRatios: accums}
 }
 
-func (p *ProfitCalculator) ApplyEvent(event types.SignalCheckOutputEvent) float64 {
+func (p *ProfitCalculator) ApplyEvent(event common.SignalCheckOutputEvent) float64 {
 	if p.input.Debug {
 		log.Printf("ProfitCalculator: applying event '%v' with price %v\n", event.EventType, event.Price)
 	}
 	p.appliedEventCount++
 	switch event.EventType {
-	case types.ENTERED:
+	case common.ENTERED:
 		p.putIn = 1.0
 		p.tookOut = 0.0
 		p.price = float64(event.Price)
-	case types.STOPPED_LOSS, types.INVALIDATED:
+	case common.STOPPED_LOSS, common.INVALIDATED:
 		if p.appliedEventCount == 1 {
 			if p.input.Debug {
 				log.Println("ProfitCalculator: invalidating at first event. Likely signal out-of-sync with data.")
@@ -53,14 +53,14 @@ func (p *ProfitCalculator) ApplyEvent(event types.SignalCheckOutputEvent) float6
 		p.putIn = 0
 		p.price = float64(event.Price)
 	default:
-		if len(event.EventType) <= 13 || event.EventType[:13] != types.TAKEN_PROFIT_ {
+		if len(event.EventType) <= 13 || event.EventType[:13] != common.TAKEN_PROFIT_ {
 			// N.B. invalid event types are not considered possible
 			if p.input.Debug {
 				log.Println("ProfitCalculator: found invalid event type. This is likely a bug!")
 			}
 			return 0.0
 		}
-		n, err := strconv.Atoi(strings.Split(event.EventType, types.TAKEN_PROFIT_)[1])
+		n, err := strconv.Atoi(strings.Split(event.EventType, common.TAKEN_PROFIT_)[1])
 		if err != nil {
 			// N.B. invalid event types are not considered possible
 			if p.input.Debug {

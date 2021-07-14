@@ -3,32 +3,32 @@ package profitcalculator
 import (
 	"testing"
 
-	"github.com/marianogappa/signal-checker/types"
+	"github.com/marianogappa/signal-checker/common"
 )
 
 func TestProfitCalculator(t *testing.T) {
 	type test struct {
 		name     string
-		input    types.SignalCheckInput
-		events   []types.SignalCheckOutputEvent
+		input    common.SignalCheckInput
+		events   []common.SignalCheckOutputEvent
 		expected []float64
 	}
 
 	tss := []test{
 		{
 			name: "Happy",
-			input: types.SignalCheckInput{
-				TakeProfits:      []types.JsonFloat64{1.0},
-				TakeProfitRatios: []types.JsonFloat64{1.0},
+			input: common.SignalCheckInput{
+				TakeProfits:      []common.JsonFloat64{1.0},
+				TakeProfitRatios: []common.JsonFloat64{1.0},
 			},
-			events: []types.SignalCheckOutputEvent{
+			events: []common.SignalCheckOutputEvent{
 				{
-					EventType: types.ENTERED,
+					EventType: common.ENTERED,
 					Price:     0.1,
 					At:        "2020-01-02T03:04:05+00:00",
 				},
 				{
-					EventType: types.TAKEN_PROFIT_ + "1",
+					EventType: common.TAKEN_PROFIT_ + "1",
 					Price:     1,
 					At:        "2020-01-02T03:04:05+00:00",
 				},

@@ -1,7 +1,7 @@
 ARTIFACT = signal-checker
 
 build: ## build for default architecture.
-build:
+build: test
 	go build -o ${ARTIFACT} -a .
 
 test: ## Run tests
@@ -12,8 +12,8 @@ install: ## Install into PATH.
 install:
 	go install
 
-release: ## Build, package, tag and publish releases with goreleaser.
-release:
+release: ## Test, Build, package, tag and publish releases with goreleaser.
+release: test
 	goreleaser --rm-dist
 
 release-dry: ## Build and package releases with goreleaser without publishing or tagging

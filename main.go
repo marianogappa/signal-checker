@@ -16,8 +16,8 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/marianogappa/signal-checker/common"
 	"github.com/marianogappa/signal-checker/signalchecker"
-	"github.com/marianogappa/signal-checker/types"
 )
 
 func serve(args []string) {
@@ -34,7 +34,7 @@ func serve(args []string) {
 }
 
 func serveCheck(w http.ResponseWriter, r *http.Request) {
-	var input types.SignalCheckInput
+	var input common.SignalCheckInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -52,7 +52,7 @@ func main() {
 		serve(os.Args)
 	}
 
-	input := types.SignalCheckInput{}
+	input := common.SignalCheckInput{}
 	if err := json.Unmarshal([]byte(inputStr), &input); err != nil {
 		log.Fatal(err)
 	}
