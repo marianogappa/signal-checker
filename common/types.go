@@ -80,6 +80,9 @@ type SignalCheckInput struct {
 	// IfTP4StopAtTP3 is a boolean that, if set, changes the stop loss to TP3 if TP4 is reached.
 	IfTP4StopAtTP3 bool `json:"ifTP4StopAtTP3"`
 
+	// DontCalculateMaxEnterUSD prevents calculation of MaxEnterUSD, which can be expensive and lengthy.
+	DontCalculateMaxEnterUSD bool `json:"dontCalculateMaxEnterUSD"`
+
 	// TODO add invalidateIfTPBeforeEntering
 }
 
@@ -147,7 +150,7 @@ type SignalCheckOutput struct {
 	FirstCandleOpenPrice JsonFloat64 `json:"firstCandleOpenPrice"`
 
 	// FirstCandleAt is the ISO8601 datetime at which the first checked candlestick opened.
-	FirstCandleAt string `json:"firstCandleAt"`
+	FirstCandleAt ISO8601 `json:"firstCandleAt"`
 
 	// HighestTakeProfit is the highest take profit reached from the signal input (0 means none were reached).
 	HighestTakeProfit int `json:"highestTakeProfit"`

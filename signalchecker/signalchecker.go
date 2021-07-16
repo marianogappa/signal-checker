@@ -90,7 +90,7 @@ type checkSignalState struct {
 	reachedStopLoss      bool
 	highestTakeProfit    int
 	firstCandleOpenPrice common.JsonFloat64
-	firstCandleAt        string
+	firstCandleAt        common.ISO8601
 	invalidAt            time.Time
 	hasInvalidAt         bool
 	events               []common.SignalCheckOutputEvent
@@ -145,7 +145,7 @@ func (s *checkSignalState) applyTick(tick common.Tick, err error) (bool, error) 
 	if s.first {
 		s.first = false
 		s.firstCandleOpenPrice = tick.Price
-		s.firstCandleAt = tickTime.UTC().Format(time.RFC3339)
+		s.firstCandleAt = common.ISO8601(tickTime.UTC().Format(time.RFC3339))
 	}
 	if s.hasInvalidAt && (tickTime.After(s.invalidAt) || tickTime.Equal(s.invalidAt)) {
 		return s.applyEvent(common.INVALIDATED, tick), nil
@@ -204,7 +204,12 @@ func calculateMaxEnterUSD(exchange common.Exchange, input common.SignalCheckInpu
 	if err != nil {
 		return common.JsonFloat64(0.0), err
 	}
-	return maxTrade.BaseAssetPrice * usdPricePerBaseAsset * maxTrade.BaseAssetQuantity, nil
+	maxEnterUSD := usdPricePerBaseAsset * maxTrade.BaseAssetQuantity
+	if input.Debug {
+		log.Printf("calculateMaxEnterUSD: 80%% highest quantity trade was %v units of %v/%v at a price of %.6f (but entered price was %.6f), which is a USD price of $%.6f per unit, totalling $%.6f\n",
+			maxTrade.BaseAssetQuantity, input.BaseAsset, input.QuoteAsset, maxTrade.BaseAssetPrice, enteredEvent.Price, usdPricePerBaseAsset, maxEnterUSD)
+	}
+	return maxEnterUSD, nil
 }
 
 func doCheckSignal(input common.SignalCheckInput, nextTick func() (common.Tick, error)) (common.SignalCheckOutput, error) {
@@ -219,7 +224,7 @@ func doCheckSignal(input common.SignalCheckInput, nextTick func() (common.Tick, 
 			break
 		}
 	}
-	if isEnded && (err == nil || err == common.ErrOutOfCandlesticks) {
+	if isEnded && (err == nil || err == common.ErrOutOfCandlesticks) && !input.DontCalculateMaxEnterUSD {
 		maxEnterUSD, err = calculateMaxEnterUSD(exchanges[input.Exchange], input, checker.events)
 		if err != nil {
 			log.Println(err)
