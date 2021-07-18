@@ -43,8 +43,8 @@ func (ci *TradeIterator) GetMaxBaseAssetEnter(minuteCount, bucketCount, maxTotal
 		return trades[i].BaseAssetQuantity < trades[j].BaseAssetQuantity
 	})
 
-	// Pick the trade with quantity at 80% of the way to the largest
-	chosen := int(math.Round(float64(len(trades)) * 0.8))
+	// Pick the trade with maximum quantity at 95% of the way to the largest
+	chosen := int(math.Round(float64(len(trades)) * 0.95))
 
 	return trades[chosen], nil
 }
