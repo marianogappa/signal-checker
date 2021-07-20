@@ -48,7 +48,11 @@ func (p *ProfitCalculator) ApplyEvent(event common.SignalCheckOutputEvent) float
 			}
 			return 0.0
 		}
-		p.putIn *= float64(event.Price) / p.price
+		if !p.input.IsShort {
+			p.putIn *= float64(event.Price) / p.price
+		} else {
+			p.putIn *= p.price / float64(event.Price)
+		}
 		p.tookOut += p.putIn
 		p.putIn = 0
 		p.price = float64(event.Price)
@@ -68,8 +72,11 @@ func (p *ProfitCalculator) ApplyEvent(event common.SignalCheckOutputEvent) float
 			}
 			return 0.0
 		}
-
-		p.putIn *= float64(event.Price) / p.price
+		if !p.input.IsShort {
+			p.putIn *= float64(event.Price) / p.price
+		} else {
+			p.putIn *= p.price / float64(event.Price)
+		}
 		takeOut := p.putIn * p.accumRatios[n-1]
 		p.putIn -= takeOut
 		p.tookOut += takeOut

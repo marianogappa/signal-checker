@@ -18,6 +18,8 @@ func TestProfitCalculator(t *testing.T) {
 		{
 			name: "Happy",
 			input: common.SignalCheckInput{
+				BaseAsset:        "BTC",
+				QuoteAsset:       "USDT",
 				TakeProfits:      []common.JsonFloat64{1.0},
 				TakeProfitRatios: []common.JsonFloat64{1.0},
 			},

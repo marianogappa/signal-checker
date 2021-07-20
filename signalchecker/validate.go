@@ -1,14 +1,13 @@
 package signalchecker
 
 import (
-	"errors"
+	"sort"
 	"strings"
 
 	"github.com/marianogappa/signal-checker/common"
 )
 
-func invalidateWith(msg string, input common.SignalCheckInput) (common.SignalCheckOutput, error) {
-	err := errors.New(msg)
+func invalidateWith(err error, input common.SignalCheckInput) (common.SignalCheckOutput, error) {
 	return common.SignalCheckOutput{IsError: true, HttpStatus: 400, ErrorMessage: err.Error(), Input: input}, err
 }
 
@@ -21,27 +20,54 @@ func sum(ss []common.JsonFloat64) float64 {
 }
 
 func validateInput(input common.SignalCheckInput) (common.SignalCheckOutput, error) {
+	if input.BaseAsset == "" {
+		return invalidateWith(common.ErrBaseAssetRequired, input)
+	}
+	if input.QuoteAsset == "" {
+		return invalidateWith(common.ErrQuoteAssetRequired, input)
+	}
 	input.Exchange = strings.ToLower(input.Exchange)
 	input.BaseAsset = strings.ToUpper(input.BaseAsset)
 	input.QuoteAsset = strings.ToUpper(input.QuoteAsset)
+	if !input.IsShort {
+		sort.Slice(input.TakeProfits, func(i, j int) bool { return input.TakeProfits[i] < input.TakeProfits[j] })
+	} else {
+		sort.Slice(input.TakeProfits, func(i, j int) bool { return input.TakeProfits[i] > input.TakeProfits[j] })
+	}
+	if input.EnterRangeHigh < input.EnterRangeLow {
+		return invalidateWith(common.ErrEnterRangeHighIsLessThanEnterRangeLow, input)
+	}
+	if !input.IsShort && input.StopLoss != -1 && input.StopLoss >= input.EnterRangeLow {
+		return invalidateWith(common.ErrStopLossIsGreaterThanOrEqualToEnterRangeLow, input)
+	}
+	if input.IsShort && input.StopLoss != -1 && input.StopLoss <= input.EnterRangeHigh {
+		return invalidateWith(common.ErrStopLossIsLessThanOrEqualToEnterRangeHigh, input)
+	}
+	if !input.IsShort && len(input.TakeProfits) > 0 && input.TakeProfits[0] <= input.EnterRangeHigh {
+		return invalidateWith(common.ErrFirstTPIsLessThanOrEqualToEnterRangeHigh, input)
+	}
+	if input.IsShort && len(input.TakeProfits) > 0 && input.TakeProfits[0] >= input.EnterRangeLow {
+		return invalidateWith(common.ErrFirstTPIsGreaterThanOrEqualToEnterRangeLow, input)
+	}
 	if input.Exchange == "" {
 		input.Exchange = "binance"
 	}
-	if input.Exchange != "binance" && input.Exchange != "ftx" && input.Exchange != "coinbase" && input.Exchange != "huobi" && input.Exchange != "kraken" && input.Exchange != "kucoin" {
-		return invalidateWith("The only valid exchanges are 'binance', 'ftx', 'coinbase', 'huobi', 'kraken' and 'kucoin'", input)
+	if input.Exchange != "binance" && input.Exchange != "ftx" && input.Exchange != "coinbase" &&
+		input.Exchange != "huobi" && input.Exchange != "kraken" && input.Exchange != "kucoin" &&
+		input.Exchange != "binanceusdmfutures" {
+		return invalidateWith(common.ErrInvalidExchange, input)
 	}
 	if input.InitialISO8601 == "" {
-		return invalidateWith("InitialISO8601 is required", input)
+		return invalidateWith(common.ErrInitialISO8601Required, input)
 	}
 	if _, err := input.InitialISO8601.Time(); err != nil {
-		return invalidateWith("InitialISO8601 is formatted incorrectly, should be ISO3601 e.g. 2021-07-04T14:14:18+00:00", input)
+		return invalidateWith(common.ErrInitialISO8601FormattedIncorrectly, input)
 	}
 	if _, err := input.InvalidateISO8601.Time(); input.InvalidateISO8601 != "" && err != nil {
-		return invalidateWith("InvalidateISO8601 is formatted incorrectly, should be ISO3601 e.g. 2021-07-04T14:14:18+00:00", input)
+		return invalidateWith(common.ErrInvalidateISO8601FormattedIncorrectly, input)
 	}
 	if len(input.TakeProfitRatios) > 0 && sum(input.TakeProfitRatios) != 1.0 {
-		return invalidateWith("takeProfitRatios must add up to 1 (but it does not need to match the takeProfits length)", input)
+		return invalidateWith(common.ErrTakeProfitRatiosMustAddUpToOne, input)
 	}
-	// TODO check price targets don't match
 	return common.SignalCheckOutput{Input: input}, nil
 }

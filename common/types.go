@@ -17,7 +17,7 @@ import (
 // - Durations are in seconds.
 // - All prices are floating point numbers for the given asset pair on the given exchange.
 type SignalCheckInput struct {
-	// Exchange must be one of ['binance', 'ftx', 'coinbase', 'huobi', 'kraken', 'kucoin']; default is 'binance'
+	// Exchange must be one of ['binance', 'ftx', 'coinbase', 'huobi', 'kraken', 'kucoin', 'binanceusdmfutures']; default is 'binance'
 	Exchange string `json:"exchange"`
 
 	// BaseAsset is LTC in LTCUSDT
@@ -31,6 +31,9 @@ type SignalCheckInput struct {
 
 	// EnterRangeHigh is the maximum (inclusive) value at which to enter signal (-1 for enter immediately)
 	EnterRangeHigh JsonFloat64 `json:"enterRangeHigh"`
+
+	// IsShort defines if this signal is for a LONG or a SHORT. Defaults to LONG.
+	IsShort bool `json:"isShort"`
 
 	// TakeProfits are the prices at which to take profits (empty for no take profits)
 	TakeProfits []JsonFloat64 `json:"takeProfits"`
@@ -93,12 +96,13 @@ const (
 	FINISHED_DATASET = "finished_dataset"
 	TAKEN_PROFIT_    = "taken_profit_"
 
-	BINANCE  = "binance"
-	FTX      = "ftx"
-	COINBASE = "coinbase"
-	HUOBI    = "huobi"
-	KRAKEN   = "kraken"
-	KUCOIN   = "kucoin"
+	BINANCE              = "binance"
+	FTX                  = "ftx"
+	COINBASE             = "coinbase"
+	HUOBI                = "huobi"
+	KRAKEN               = "kraken"
+	KUCOIN               = "kucoin"
+	BINANCE_USDM_FUTURES = "binanceusdmfutures"
 )
 
 // SignalCheckOutputEvent is an event that happened upon checking a signal.
@@ -249,10 +253,22 @@ type Trade struct {
 }
 
 var (
-	ErrOutOfCandlesticks = errors.New("exchange ran out of candlesticks")
-	ErrOutOfTrades       = errors.New("exchange ran out of trades")
-	ErrInvalidMarketPair = errors.New("market pair does not exist on exchange")
-	ErrRateLimit         = errors.New("exchange asked us to enhance our calm")
+	ErrOutOfCandlesticks                           = errors.New("exchange ran out of candlesticks")
+	ErrOutOfTrades                                 = errors.New("exchange ran out of trades")
+	ErrInvalidMarketPair                           = errors.New("market pair does not exist on exchange")
+	ErrRateLimit                                   = errors.New("exchange asked us to enhance our calm")
+	ErrEnterRangeHighIsLessThanEnterRangeLow       = errors.New("enterRangeHigh is < enterRangeLow")
+	ErrStopLossIsGreaterThanOrEqualToEnterRangeLow = errors.New("stopLoss is >= enterRangeLow; if you want no stopLoss, set the value to -1")
+	ErrStopLossIsLessThanOrEqualToEnterRangeHigh   = errors.New("stopLoss is <= enterRangeHigh; if you want no stopLoss, set the value to -1")
+	ErrFirstTPIsLessThanOrEqualToEnterRangeHigh    = errors.New("first take profit is <= enterRangeHigh")
+	ErrFirstTPIsGreaterThanOrEqualToEnterRangeLow  = errors.New("first take profit is >= enterRangeLow")
+	ErrInvalidExchange                             = errors.New("the only valid exchanges are 'binance', 'ftx', 'coinbase', 'huobi', 'kraken', 'kucoin' and 'binanceusdmfutures'")
+	ErrInitialISO8601Required                      = errors.New("InitialISO8601 is required")
+	ErrInitialISO8601FormattedIncorrectly          = errors.New("InitialISO8601 is formatted incorrectly, should be ISO3601 e.g. 2021-07-04T14:14:18+00:00")
+	ErrInvalidateISO8601FormattedIncorrectly       = errors.New("InvalidateISO8601 is formatted incorrectly, should be ISO3601 e.g. 2021-07-04T14:14:18+00:00")
+	ErrTakeProfitRatiosMustAddUpToOne              = errors.New("takeProfitRatios must add up to 1 (but it does not need to match the takeProfits length)")
+	ErrBaseAssetRequired                           = errors.New("base asset is required (e.g. BTC)")
+	ErrQuoteAssetRequired                          = errors.New("quote asset is required (e.g. USDT)")
 )
 
 type JsonFloat64 float64

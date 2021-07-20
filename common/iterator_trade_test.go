@@ -20,7 +20,7 @@ func TestGetMaxBaseAssetEnter(t *testing.T) {
 
 	tss := []test{
 		{
-			name:           "Takes the q in the 20pct bucket",
+			name:           "Takes the q in the 99%",
 			minuteCount:    5,
 			bucketCount:    10,
 			maxTotalTrades: 10,
@@ -33,11 +33,11 @@ func TestGetMaxBaseAssetEnter(t *testing.T) {
 				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(6.0)},
 				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(7.0)},
 				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(8.0)},
-				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(9.0)}, // <-- 20%
+				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(9.0)},
 				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(10.0)},
 			},
 			expectedErr:   nil,
-			expectedTrade: Trade{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(9)},
+			expectedTrade: Trade{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(10)},
 		},
 		{
 			name:           "Same result because it ignores a trade outside maxTotalTrades",
@@ -53,12 +53,12 @@ func TestGetMaxBaseAssetEnter(t *testing.T) {
 				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(6.0)},
 				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(7.0)},
 				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(8.0)},
-				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(9.0)}, // <-- 20%
+				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(9.0)},
 				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(10.0)},
 				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(100000000000.0)},
 			},
 			expectedErr:   nil,
-			expectedTrade: Trade{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(9)},
+			expectedTrade: Trade{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(10.0)},
 		},
 		{
 			name:           "Same result because even inside maxTotalTrades, exceeding 5 minute count",
@@ -74,12 +74,12 @@ func TestGetMaxBaseAssetEnter(t *testing.T) {
 				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(6.0), Timestamp: startISO8601},
 				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(7.0), Timestamp: startISO8601},
 				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(8.0), Timestamp: startISO8601},
-				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(9.0), Timestamp: startISO8601}, // <-- 20%
+				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(9.0), Timestamp: startISO8601},
 				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(10.0), Timestamp: startISO8601},
 				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(100000000000.0), Timestamp: anHourLaterISO8601},
 			},
 			expectedErr:   nil,
-			expectedTrade: Trade{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(9.0), Timestamp: startISO8601},
+			expectedTrade: Trade{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(10.0), Timestamp: startISO8601},
 		},
 		{
 			name:           "Does not fail when running out of trades",
@@ -95,11 +95,11 @@ func TestGetMaxBaseAssetEnter(t *testing.T) {
 				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(6.0)},
 				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(7.0)},
 				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(8.0)},
-				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(9.0)}, // <-- 20%
+				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(9.0)},
 				{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(10.0)},
 			},
 			expectedErr:   nil,
-			expectedTrade: Trade{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(9)},
+			expectedTrade: Trade{BaseAssetPrice: f(1.0), BaseAssetQuantity: f(10.0)},
 		},
 	}
 	for _, ts := range tss {

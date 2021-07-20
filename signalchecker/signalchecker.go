@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/marianogappa/signal-checker/binance"
+	"github.com/marianogappa/signal-checker/binanceusdmfutures"
 	"github.com/marianogappa/signal-checker/coinbase"
 	"github.com/marianogappa/signal-checker/common"
 	"github.com/marianogappa/signal-checker/ftx"
@@ -31,11 +32,12 @@ import (
 
 var (
 	exchanges = map[string]common.Exchange{
-		common.BINANCE:  binance.NewBinance(),
-		common.FTX:      ftx.NewFTX(),
-		common.COINBASE: coinbase.NewCoinbase(),
-		common.KRAKEN:   kraken.NewKraken(),
-		common.KUCOIN:   kucoin.NewKucoin(),
+		common.BINANCE:              binance.NewBinance(),
+		common.FTX:                  ftx.NewFTX(),
+		common.COINBASE:             coinbase.NewCoinbase(),
+		common.KRAKEN:               kraken.NewKraken(),
+		common.KUCOIN:               kucoin.NewKucoin(),
+		common.BINANCE_USDM_FUTURES: binanceusdmfutures.NewBinanceUSDMFutures(),
 	}
 )
 
@@ -154,13 +156,14 @@ func (s *checkSignalState) applyTick(tick common.Tick, err error) (bool, error) 
 		s.entered = true
 		return s.applyEvent(common.ENTERED, tick), nil
 	}
-	if s.entered && tick.Price <= s.stopLoss {
+	if s.entered && ((!s.input.IsShort && tick.Price <= s.stopLoss) || (s.input.IsShort && tick.Price >= s.stopLoss)) {
 		s.reachedStopLoss = true
 		return s.applyEvent(common.STOPPED_LOSS, tick), nil
 	}
-	if s.entered && s.highestTakeProfit < len(s.input.TakeProfits) && tick.Price >= s.input.TakeProfits[s.highestTakeProfit] {
+	if s.entered && s.highestTakeProfit < len(s.input.TakeProfits) &&
+		((!s.input.IsShort && tick.Price >= s.input.TakeProfits[s.highestTakeProfit]) || (s.input.IsShort && tick.Price <= s.input.TakeProfits[s.highestTakeProfit])) {
 		for i := len(s.input.TakeProfits) - 1; i >= s.highestTakeProfit; i-- {
-			if tick.Price < s.input.TakeProfits[i] {
+			if (!s.input.IsShort && tick.Price < s.input.TakeProfits[i]) || (s.input.IsShort && tick.Price > s.input.TakeProfits[i]) {
 				continue
 			}
 			s.highestTakeProfit = i + 1
