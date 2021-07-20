@@ -7,15 +7,17 @@ import (
 )
 
 type coinbaseTradeIterator struct {
+	coinbase              Coinbase
 	baseAsset, quoteAsset string
 	// trades                []common.Trade
 	requestFromMillis int
 }
 
-func newCoinbaseTradeIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *coinbaseTradeIterator {
+func (c Coinbase) newTradeIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *coinbaseTradeIterator {
 	// N.B. already validated
 	initial, _ := initialISO8601.Time()
 	return &coinbaseTradeIterator{
+		coinbase:          c,
 		baseAsset:         baseAsset,
 		quoteAsset:        quoteAsset,
 		requestFromMillis: int(initial.Unix()) * 1000,

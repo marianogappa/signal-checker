@@ -203,8 +203,8 @@ type klinesResult struct {
 	httpStatus          int
 }
 
-func getKlines(baseAsset string, quoteAsset string, startTimeMillis int) (klinesResult, error) {
-	req, err := http.NewRequest("GET", "https://api.binance.com/api/v3/klines", nil)
+func (b Binance) getKlines(baseAsset string, quoteAsset string, startTimeMillis int) (klinesResult, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%vklines", b.apiURL), nil)
 	if err != nil {
 		return klinesResult{err: err}, err
 	}

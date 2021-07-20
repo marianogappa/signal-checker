@@ -4,16 +4,22 @@ import (
 	"github.com/marianogappa/signal-checker/common"
 )
 
-type Kucoin struct{}
-
-func NewKucoin() Kucoin {
-	return Kucoin{}
+type Kucoin struct {
+	apiURL string
 }
 
-func (b Kucoin) BuildCandlestickIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *common.CandlestickIterator {
-	return common.NewCandlestickIterator(newKucoinCandlestickIterator(baseAsset, quoteAsset, initialISO8601).next)
+func NewKucoin() *Kucoin {
+	return &Kucoin{apiURL: "https://api.kucoin.com/api/v1/"}
 }
 
-func (b Kucoin) BuildTradeIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *common.TradeIterator {
-	return common.NewTradeIterator(newKucoinTradeIterator(baseAsset, quoteAsset, initialISO8601).next)
+func (k *Kucoin) overrideAPIURL(apiURL string) {
+	k.apiURL = apiURL
+}
+
+func (k Kucoin) BuildCandlestickIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *common.CandlestickIterator {
+	return common.NewCandlestickIterator(k.newCandlestickIterator(baseAsset, quoteAsset, initialISO8601).next)
+}
+
+func (k Kucoin) BuildTradeIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *common.TradeIterator {
+	return common.NewTradeIterator(k.newTradeIterator(baseAsset, quoteAsset, initialISO8601).next)
 }

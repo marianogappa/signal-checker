@@ -4,16 +4,22 @@ import (
 	"github.com/marianogappa/signal-checker/common"
 )
 
-type FTX struct{}
-
-func NewFTX() FTX {
-	return FTX{}
+type FTX struct {
+	apiURL string
 }
 
-func (b FTX) BuildCandlestickIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *common.CandlestickIterator {
-	return common.NewCandlestickIterator(newFTXCandlestickIterator(baseAsset, quoteAsset, initialISO8601).next)
+func NewFTX() *FTX {
+	return &FTX{apiURL: "https://ftx.com/api/"}
 }
 
-func (b FTX) BuildTradeIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *common.TradeIterator {
-	return common.NewTradeIterator(newFTXTradeIterator(baseAsset, quoteAsset, initialISO8601).next)
+func (f *FTX) overrideAPIURL(apiURL string) {
+	f.apiURL = apiURL
+}
+
+func (f FTX) BuildCandlestickIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *common.CandlestickIterator {
+	return common.NewCandlestickIterator(f.newCandlestickIterator(baseAsset, quoteAsset, initialISO8601).next)
+}
+
+func (f FTX) BuildTradeIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *common.TradeIterator {
+	return common.NewTradeIterator(f.newTradeIterator(baseAsset, quoteAsset, initialISO8601).next)
 }

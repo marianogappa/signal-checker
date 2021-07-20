@@ -5,15 +5,17 @@ import (
 )
 
 type krakenCandlestickIterator struct {
+	kraken                Kraken
 	baseAsset, quoteAsset string
 	candlesticks          []common.Candlestick
 	requestFromSecs       int
 }
 
-func newKrakenCandlestickIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *krakenCandlestickIterator {
+func (k Kraken) newCandlestickIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *krakenCandlestickIterator {
 	// N.B. already validated
 	initial, _ := initialISO8601.Time()
 	return &krakenCandlestickIterator{
+		kraken:          k,
 		baseAsset:       baseAsset,
 		quoteAsset:      quoteAsset,
 		requestFromSecs: int(initial.Unix()),
@@ -26,7 +28,7 @@ func (it *krakenCandlestickIterator) next() (common.Candlestick, error) {
 		it.candlesticks = it.candlesticks[1:]
 		return c, nil
 	}
-	klinesResult, err := getKlines(it.baseAsset, it.quoteAsset, it.requestFromSecs)
+	klinesResult, err := it.kraken.getKlines(it.baseAsset, it.quoteAsset, it.requestFromSecs)
 	if err != nil {
 		return common.Candlestick{}, err
 	}

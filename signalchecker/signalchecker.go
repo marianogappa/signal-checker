@@ -100,7 +100,6 @@ type checkSignalState struct {
 	initialTime          time.Time
 	priceCheckpoint      float64
 	isEnded              bool
-	enterAmounts         []common.JsonFloat64
 }
 
 func newChecker(input common.SignalCheckInput) *checkSignalState {
@@ -209,7 +208,7 @@ func calculateMaxEnterUSD(exchange common.Exchange, input common.SignalCheckInpu
 	}
 	maxEnterUSD := usdPricePerBaseAsset * maxTrade.BaseAssetQuantity
 	if input.Debug {
-		log.Printf("calculateMaxEnterUSD: 80%% highest quantity trade was %v units of %v/%v at a price of %.6f (but entered price was %.6f), which is a USD price of $%.6f per unit, totalling $%.6f\n",
+		log.Printf("calculateMaxEnterUSD: best-ish quantity trade was %v units of %v/%v at a price of %.6f (but entered price was %.6f!!), which is a USD price of ~$%.6f per unit, totalling ~$%.6f\n",
 			maxTrade.BaseAssetQuantity, input.BaseAsset, input.QuoteAsset, maxTrade.BaseAssetPrice, enteredEvent.Price, usdPricePerBaseAsset, maxEnterUSD)
 	}
 	return maxEnterUSD, nil

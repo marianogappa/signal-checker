@@ -3,12 +3,13 @@ package binanceusdmfutures
 import "github.com/marianogappa/signal-checker/common"
 
 type binanceTradeIterator struct {
+	binance                           BinanceUSDMFutures
 	baseAsset, quoteAsset             string
 	trades                            []common.Trade
 	requestFromMillis, initialSeconds int
 }
 
-func newBinanceTradeIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *binanceTradeIterator {
+func (b BinanceUSDMFutures) newTradeIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *binanceTradeIterator {
 	// N.B. already validated
 	initial, _ := initialISO8601.Time()
 	initialSeconds := int(initial.Unix())
@@ -26,7 +27,7 @@ func (it *binanceTradeIterator) next() (common.Trade, error) {
 		it.trades = it.trades[1:]
 		return c, nil
 	}
-	aggTradesResult, err := getTrades(it.baseAsset, it.quoteAsset, it.requestFromMillis)
+	aggTradesResult, err := it.binance.getTrades(it.baseAsset, it.quoteAsset, it.requestFromMillis)
 	if err != nil {
 		return common.Trade{}, err
 	}

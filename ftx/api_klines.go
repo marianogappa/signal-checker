@@ -65,8 +65,8 @@ type klinesResult struct {
 	httpStatus      int
 }
 
-func getKlines(baseAsset string, quoteAsset string, startTimeSecs int) (klinesResult, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("https://ftx.com/api/markets/%v/%v/candles", strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset)), nil)
+func (f FTX) getKlines(baseAsset string, quoteAsset string, startTimeSecs int) (klinesResult, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%vmarkets/%v/%v/candles", f.apiURL, strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset)), nil)
 	if err != nil {
 		return klinesResult{err: err}, err
 	}

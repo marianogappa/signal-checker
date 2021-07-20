@@ -4,16 +4,22 @@ import (
 	"github.com/marianogappa/signal-checker/common"
 )
 
-type Kraken struct{}
-
-func NewKraken() Kraken {
-	return Kraken{}
+type Kraken struct {
+	apiURL string
 }
 
-func (b Kraken) BuildCandlestickIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *common.CandlestickIterator {
-	return common.NewCandlestickIterator(newKrakenCandlestickIterator(baseAsset, quoteAsset, initialISO8601).next)
+func NewKraken() *Kraken {
+	return &Kraken{apiURL: "https://api.kraken.com/0/"}
 }
 
-func (b Kraken) BuildTradeIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *common.TradeIterator {
-	return common.NewTradeIterator(newKrakenTradeIterator(baseAsset, quoteAsset, initialISO8601).next)
+func (k *Kraken) overrideAPIURL(apiURL string) {
+	k.apiURL = apiURL
+}
+
+func (k Kraken) BuildCandlestickIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *common.CandlestickIterator {
+	return common.NewCandlestickIterator(k.newCandlestickIterator(baseAsset, quoteAsset, initialISO8601).next)
+}
+
+func (k Kraken) BuildTradeIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *common.TradeIterator {
+	return common.NewTradeIterator(k.newTradeIterator(baseAsset, quoteAsset, initialISO8601).next)
 }

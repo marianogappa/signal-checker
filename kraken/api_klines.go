@@ -172,8 +172,8 @@ type klinesResult struct {
 	nextSince          int
 }
 
-func getKlines(baseAsset string, quoteAsset string, startTimeSecs int) (klinesResult, error) {
-	req, err := http.NewRequest("GET", "https://api.kraken.com/0/public/OHLC", nil)
+func (k Kraken) getKlines(baseAsset string, quoteAsset string, startTimeSecs int) (klinesResult, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%vpublic/OHLC", k.apiURL), nil)
 	if err != nil {
 		return klinesResult{err: err}, err
 	}

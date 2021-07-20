@@ -7,15 +7,17 @@ import (
 )
 
 type krakenTradeIterator struct {
+	kraken                Kraken
 	baseAsset, quoteAsset string
 	// trades                []common.Trade
 	requestFromMillis int
 }
 
-func newKrakenTradeIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *krakenTradeIterator {
+func (k Kraken) newTradeIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *krakenTradeIterator {
 	// N.B. already validated
 	initial, _ := initialISO8601.Time()
 	return &krakenTradeIterator{
+		kraken:            k,
 		baseAsset:         baseAsset,
 		quoteAsset:        quoteAsset,
 		requestFromMillis: int(initial.Unix()) * 1000,

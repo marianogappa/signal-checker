@@ -5,15 +5,17 @@ import (
 )
 
 type ftxCandlestickIterator struct {
+	ftx                   FTX
 	baseAsset, quoteAsset string
 	candlesticks          []common.Candlestick
 	requestFromSecs       int
 }
 
-func newFTXCandlestickIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *ftxCandlestickIterator {
+func (f FTX) newCandlestickIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *ftxCandlestickIterator {
 	// N.B. already validated
 	initial, _ := initialISO8601.Time()
 	return &ftxCandlestickIterator{
+		ftx:             f,
 		baseAsset:       baseAsset,
 		quoteAsset:      quoteAsset,
 		requestFromSecs: int(initial.Unix()),
@@ -26,7 +28,7 @@ func (it *ftxCandlestickIterator) next() (common.Candlestick, error) {
 		it.candlesticks = it.candlesticks[1:]
 		return c, nil
 	}
-	klinesResult, err := getKlines(it.baseAsset, it.quoteAsset, it.requestFromSecs)
+	klinesResult, err := it.ftx.getKlines(it.baseAsset, it.quoteAsset, it.requestFromSecs)
 	if err != nil {
 		return common.Candlestick{}, err
 	}

@@ -5,15 +5,17 @@ import (
 )
 
 type kucoinCandlestickIterator struct {
+	kucoin                Kucoin
 	baseAsset, quoteAsset string
 	candlesticks          []common.Candlestick
 	requestFromSecs       int
 }
 
-func newKucoinCandlestickIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *kucoinCandlestickIterator {
+func (k Kucoin) newCandlestickIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *kucoinCandlestickIterator {
 	// N.B. already validated
 	initial, _ := initialISO8601.Time()
 	return &kucoinCandlestickIterator{
+		kucoin:          k,
 		baseAsset:       baseAsset,
 		quoteAsset:      quoteAsset,
 		requestFromSecs: int(initial.Unix()),
@@ -27,7 +29,7 @@ func (it *kucoinCandlestickIterator) next() (common.Candlestick, error) {
 		it.candlesticks = it.candlesticks[:len(it.candlesticks)-1]
 		return c, nil
 	}
-	klinesResult, err := getKlines(it.baseAsset, it.quoteAsset, it.requestFromSecs)
+	klinesResult, err := it.kucoin.getKlines(it.baseAsset, it.quoteAsset, it.requestFromSecs)
 	if err != nil {
 		return common.Candlestick{}, err
 	}

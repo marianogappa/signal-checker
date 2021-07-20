@@ -75,8 +75,8 @@ type aggTradesResult struct {
 	httpStatus          int
 }
 
-func getTrades(baseAsset string, quoteAsset string, startTimeMillis int) (aggTradesResult, error) {
-	req, err := http.NewRequest("GET", "https://fapi.binance.com/api/v3/aggTrades", nil)
+func (b BinanceUSDMFutures) getTrades(baseAsset string, quoteAsset string, startTimeMillis int) (aggTradesResult, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%vaggTrades", b.apiURL), nil)
 	if err != nil {
 		return aggTradesResult{err: err}, err
 	}

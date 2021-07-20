@@ -7,15 +7,17 @@ import (
 )
 
 type kucoinTradeIterator struct {
+	kucoin                Kucoin
 	baseAsset, quoteAsset string
 	// trades                []common.Trade
 	requestFromMillis int
 }
 
-func newKucoinTradeIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *kucoinTradeIterator {
+func (k Kucoin) newTradeIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *kucoinTradeIterator {
 	// N.B. already validated
 	initial, _ := initialISO8601.Time()
 	return &kucoinTradeIterator{
+		kucoin:            k,
 		baseAsset:         baseAsset,
 		quoteAsset:        quoteAsset,
 		requestFromMillis: int(initial.Unix()) * 1000,

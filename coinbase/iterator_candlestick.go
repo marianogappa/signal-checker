@@ -7,17 +7,19 @@ import (
 )
 
 type coinbaseCandlestickIterator struct {
+	coinbase              Coinbase
 	baseAsset, quoteAsset string
 	candlesticks          []common.Candlestick
 	requestFromTime       time.Time
 	initialSeconds        int
 }
 
-func newCoinbaseCandlestickIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *coinbaseCandlestickIterator {
+func (c Coinbase) newCandlestickIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *coinbaseCandlestickIterator {
 	// N.B. already validated
 	initial, _ := initialISO8601.Time()
 	initialSeconds := int(initial.Unix())
 	return &coinbaseCandlestickIterator{
+		coinbase:        c,
 		baseAsset:       baseAsset,
 		quoteAsset:      quoteAsset,
 		requestFromTime: initial,
@@ -37,7 +39,7 @@ func (it *coinbaseCandlestickIterator) next() (common.Candlestick, error) {
 	startTimeISO8601 := it.requestFromTime.Format(time.RFC3339)
 	endTimeISO8601 := it.requestFromTime.Add(299 * 60 * time.Second).Format(time.RFC3339)
 
-	klinesResult, err := getKlines(it.baseAsset, it.quoteAsset, startTimeISO8601, endTimeISO8601)
+	klinesResult, err := it.coinbase.getKlines(it.baseAsset, it.quoteAsset, startTimeISO8601, endTimeISO8601)
 	if err != nil {
 		return common.Candlestick{}, err
 	}

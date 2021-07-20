@@ -101,8 +101,8 @@ type klinesResult struct {
 	httpStatus         int
 }
 
-func getKlines(baseAsset string, quoteAsset string, startTimeSecs int) (klinesResult, error) {
-	req, err := http.NewRequest("GET", "https://api.kucoin.com/api/v1/market/candles", nil)
+func (k Kucoin) getKlines(baseAsset string, quoteAsset string, startTimeSecs int) (klinesResult, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%vmarket/candles", k.apiURL), nil)
 	if err != nil {
 		return klinesResult{err: err}, err
 	}

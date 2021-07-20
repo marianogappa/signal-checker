@@ -70,8 +70,8 @@ type klinesResult struct {
 	httpStatus           int
 }
 
-func getKlines(baseAsset string, quoteAsset string, startTimeISO8601, endTimeISO8601 string) (klinesResult, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("https://api.pro.coinbase.com/products/%v-%v/candles", strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset)), nil)
+func (c Coinbase) getKlines(baseAsset string, quoteAsset string, startTimeISO8601, endTimeISO8601 string) (klinesResult, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%vproducts/%v-%v/candles", c.apiURL, strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset)), nil)
 	if err != nil {
 		return klinesResult{err: err}, err
 	}
