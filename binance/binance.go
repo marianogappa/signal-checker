@@ -12,7 +12,7 @@ func NewBinance() *Binance {
 	return &Binance{apiURL: "https://api.binance.com/api/v3/"}
 }
 
-func (b *Binance) OverrideAPIURL(url string) {
+func (b *Binance) overrideAPIURL(url string) {
 	b.apiURL = url
 }
 
