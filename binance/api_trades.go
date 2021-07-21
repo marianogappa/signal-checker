@@ -146,8 +146,8 @@ func (b Binance) getTrades(baseAsset string, quoteAsset string, startTimeMillis 
 	if len(trades) == 0 {
 		return aggTradesResult{
 			httpStatus: 200,
-			err:        common.ErrOutOfCandlesticks,
-		}, common.ErrOutOfCandlesticks
+			err:        common.ErrOutOfTrades,
+		}, common.ErrOutOfTrades
 	}
 
 	return aggTradesResult{
