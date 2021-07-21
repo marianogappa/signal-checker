@@ -24,6 +24,8 @@ type response struct {
 }
 
 func (r response) findDataKey() (string, error) {
+	// N.B. if you ever change this logic, please note that BTC is aliased to XBT on Kraken (and who knows what else is)
+	// so don't try to find "${baseAsset}${quoteAsset}" here, cause it might not exist.
 	for key := range r.Result {
 		if key != "last" {
 			return key, nil

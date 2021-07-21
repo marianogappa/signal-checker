@@ -1,6 +1,8 @@
 package kucoin
 
 import (
+	"fmt"
+
 	"github.com/marianogappa/signal-checker/common"
 )
 
@@ -40,8 +42,9 @@ func (it *kucoinCandlestickIterator) next() (common.Candlestick, error) {
 	// Some exchanges return earlier candlesticks to the requested time. Prune them.
 	// Note that this may remove all items, but this does not necessarily mean we are out of candlesticks.
 	// In this case we just need to fetch again.
-	for len(it.candlesticks) > 0 && it.candlesticks[0].Timestamp < it.requestFromSecs {
-		it.candlesticks = it.candlesticks[1:]
+	for len(it.candlesticks) > 0 && it.candlesticks[len(it.candlesticks)-1].Timestamp < it.requestFromSecs {
+		fmt.Println(it.candlesticks[len(it.candlesticks)-1].Timestamp, it.requestFromSecs)
+		it.candlesticks = it.candlesticks[:len(it.candlesticks)-1]
 	}
 	if len(it.candlesticks) > 0 {
 		it.requestFromSecs = it.candlesticks[0].Timestamp + 60

@@ -23,11 +23,11 @@ func coinbaseToCandlesticks(response successResponse) ([]common.Candlestick, err
 	candlesticks := make([]common.Candlestick, len(response))
 	for i := 0; i < len(response); i++ {
 		raw := response[i]
-		timestampMillisFloat, ok := raw[0].(float64)
+		timestampFloat, ok := raw[0].(float64)
 		if !ok {
-			return candlesticks, fmt.Errorf("candlestick %v had timestampMillis = %v! Invalid syntax from Coinbase", i, timestampMillisFloat)
+			return candlesticks, fmt.Errorf("candlestick %v had timestampMillis = %v! Invalid syntax from Coinbase", i, timestampFloat)
 		}
-		timestampMillis := int(timestampMillisFloat)
+		timestamp := int(timestampFloat)
 		lowestPrice, ok := raw[1].(float64)
 		if !ok {
 			return candlesticks, fmt.Errorf("candlestick %v had lowestPrice = %v! Invalid syntax from Coinbase", i, lowestPrice)
@@ -50,7 +50,7 @@ func coinbaseToCandlesticks(response successResponse) ([]common.Candlestick, err
 		}
 
 		candlestick := common.Candlestick{
-			Timestamp:    timestampMillis / 1000,
+			Timestamp:    timestamp,
 			LowestPrice:  common.JsonFloat64(lowestPrice),
 			HighestPrice: common.JsonFloat64(highestPrice),
 			OpenPrice:    common.JsonFloat64(openPrice),

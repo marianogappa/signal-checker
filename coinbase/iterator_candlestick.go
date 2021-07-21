@@ -29,8 +29,9 @@ func (c Coinbase) newCandlestickIterator(baseAsset, quoteAsset string, initialIS
 
 func (it *coinbaseCandlestickIterator) next() (common.Candlestick, error) {
 	if len(it.candlesticks) > 0 {
-		c := it.candlesticks[0]
-		it.candlesticks = it.candlesticks[1:]
+		// N.B. Coinbase returns data in descending order
+		c := it.candlesticks[len(it.candlesticks)-1]
+		it.candlesticks = it.candlesticks[:len(it.candlesticks)-1]
 		return c, nil
 	}
 	if it.requestFromTime.After(time.Now().Add(-1 * time.Minute)) {
@@ -50,8 +51,8 @@ func (it *coinbaseCandlestickIterator) next() (common.Candlestick, error) {
 	// Some exchanges return earlier candlesticks to the requested time. Prune them.
 	// Note that this may remove all items, but this does not necessarily mean we are out of candlesticks.
 	// In this case we just need to fetch again.
-	for len(it.candlesticks) > 0 && it.candlesticks[0].Timestamp < it.initialSeconds {
-		it.candlesticks = it.candlesticks[1:]
+	for len(it.candlesticks) > 0 && it.candlesticks[len(it.candlesticks)-1].Timestamp < it.initialSeconds {
+		it.candlesticks = it.candlesticks[:len(it.candlesticks)-1]
 	}
 	if len(it.candlesticks) > 0 {
 		it.requestFromTime = it.requestFromTime.Add(299 * 60 * time.Second)
