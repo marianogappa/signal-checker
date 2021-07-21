@@ -6,6 +6,7 @@ import (
 
 type Kraken struct {
 	apiURL string
+	debug  bool
 }
 
 func NewKraken() *Kraken {
@@ -14,6 +15,10 @@ func NewKraken() *Kraken {
 
 func (k *Kraken) overrideAPIURL(apiURL string) {
 	k.apiURL = apiURL
+}
+
+func (b *Kraken) SetDebug(debug bool) {
+	b.debug = debug
 }
 
 func (k Kraken) BuildCandlestickIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *common.CandlestickIterator {

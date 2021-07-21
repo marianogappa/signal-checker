@@ -305,4 +305,5 @@ func (jf JsonFloat64) MarshalJSON() ([]byte, error) {
 type Exchange interface {
 	BuildCandlestickIterator(baseAsset, quoteAsset string, initialISO8601 ISO8601) *CandlestickIterator
 	BuildTradeIterator(baseAsset, quoteAsset string, initialISO8601 ISO8601) *TradeIterator
+	SetDebug(debug bool)
 }

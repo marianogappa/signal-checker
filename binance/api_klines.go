@@ -278,6 +278,10 @@ func (b Binance) getKlines(baseAsset string, quoteAsset string, startTimeMillis 
 		}, common.ErrOutOfCandlesticks
 	}
 
+	if b.debug {
+		log.Printf("Binance candlestick request successful! Candlestick count: %v\n", len(candlesticks))
+	}
+
 	return klinesResult{
 		candlesticks: candlesticks,
 		httpStatus:   200,

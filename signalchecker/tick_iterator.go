@@ -1,6 +1,8 @@
 package signalchecker
 
-import "github.com/marianogappa/signal-checker/common"
+import (
+	"github.com/marianogappa/signal-checker/common"
+)
 
 func buildTickIterator(f func() (common.Candlestick, error)) func() (common.Tick, error) {
 	return newTickIterator(f).next

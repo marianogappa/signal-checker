@@ -6,6 +6,7 @@ import (
 
 type FTX struct {
 	apiURL string
+	debug  bool
 }
 
 func NewFTX() *FTX {
@@ -14,6 +15,10 @@ func NewFTX() *FTX {
 
 func (f *FTX) overrideAPIURL(apiURL string) {
 	f.apiURL = apiURL
+}
+
+func (b *FTX) SetDebug(debug bool) {
+	b.debug = debug
 }
 
 func (f FTX) BuildCandlestickIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *common.CandlestickIterator {

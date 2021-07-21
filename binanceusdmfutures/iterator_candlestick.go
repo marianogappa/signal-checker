@@ -1,6 +1,8 @@
 package binanceusdmfutures
 
-import "github.com/marianogappa/signal-checker/common"
+import (
+	"github.com/marianogappa/signal-checker/common"
+)
 
 type binanceCandlestickIterator struct {
 	binance               BinanceUSDMFutures
@@ -15,6 +17,7 @@ func (b BinanceUSDMFutures) newCandlestickIterator(baseAsset, quoteAsset string,
 	initial, _ := initialISO8601.Time()
 	initialSeconds := int(initial.Unix())
 	return &binanceCandlestickIterator{
+		binance:           b,
 		baseAsset:         baseAsset,
 		quoteAsset:        quoteAsset,
 		requestFromMillis: initialSeconds * 1000,

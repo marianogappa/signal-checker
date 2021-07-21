@@ -133,7 +133,9 @@ func (c Coinbase) getKlines(baseAsset string, quoteAsset string, startTimeISO860
 		}, err
 	}
 
-	log.Printf("Coinbase candlestick request successful! Candlestick count: %v\n", len(candlesticks))
+	if c.debug {
+		log.Printf("Coinbase candlestick request successful! Candlestick count: %v\n", len(candlesticks))
+	}
 
 	return klinesResult{
 		candlesticks: candlesticks,

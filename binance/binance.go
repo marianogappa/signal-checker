@@ -6,6 +6,7 @@ import (
 
 type Binance struct {
 	apiURL string
+	debug  bool
 }
 
 func NewBinance() *Binance {
@@ -14,6 +15,10 @@ func NewBinance() *Binance {
 
 func (b *Binance) overrideAPIURL(url string) {
 	b.apiURL = url
+}
+
+func (b *Binance) SetDebug(debug bool) {
+	b.debug = debug
 }
 
 func (b Binance) BuildCandlestickIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *common.CandlestickIterator {

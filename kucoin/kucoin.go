@@ -6,6 +6,7 @@ import (
 
 type Kucoin struct {
 	apiURL string
+	debug  bool
 }
 
 func NewKucoin() *Kucoin {
@@ -14,6 +15,10 @@ func NewKucoin() *Kucoin {
 
 func (k *Kucoin) overrideAPIURL(apiURL string) {
 	k.apiURL = apiURL
+}
+
+func (b *Kucoin) SetDebug(debug bool) {
+	b.debug = debug
 }
 
 func (k Kucoin) BuildCandlestickIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *common.CandlestickIterator {

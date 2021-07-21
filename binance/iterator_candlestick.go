@@ -1,6 +1,8 @@
 package binance
 
-import "github.com/marianogappa/signal-checker/common"
+import (
+	"github.com/marianogappa/signal-checker/common"
+)
 
 type binanceCandlestickIterator struct {
 	binance               Binance

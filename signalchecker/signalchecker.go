@@ -56,6 +56,7 @@ func CheckSignal(input common.SignalCheckInput) (common.SignalCheckOutput, error
 		candlestickIterator = exchange.BuildCandlestickIterator(input.BaseAsset, input.QuoteAsset, input.InitialISO8601)
 		tickIterator        = buildTickIterator(candlestickIterator.Next)
 	)
+	exchange.SetDebug(input.Debug)
 
 	return doCheckSignal(input, tickIterator)
 }
@@ -241,15 +242,14 @@ func doCheckSignal(input common.SignalCheckInput, nextTick func() (common.Tick, 
 		output.HttpStatus = 500
 		output.ErrorMessage = err.Error()
 	}
-	return common.SignalCheckOutput{
-		Events:               checker.events,
-		Input:                input,
-		Entered:              checker.entered,
-		FirstCandleOpenPrice: checker.firstCandleOpenPrice,
-		FirstCandleAt:        checker.firstCandleAt,
-		HighestTakeProfit:    checker.highestTakeProfit,
-		ReachedStopLoss:      checker.reachedStopLoss,
-		ProfitRatio:          common.JsonFloat64(checker.profitCalculator.CalculateTakeProfitRatio()),
-		MaxEnterUSD:          maxEnterUSD,
-	}, err
+	output.Events = checker.events
+	output.Input = input
+	output.Entered = checker.entered
+	output.FirstCandleOpenPrice = checker.firstCandleOpenPrice
+	output.FirstCandleAt = checker.firstCandleAt
+	output.HighestTakeProfit = checker.highestTakeProfit
+	output.ReachedStopLoss = checker.reachedStopLoss
+	output.ProfitRatio = common.JsonFloat64(checker.profitCalculator.CalculateTakeProfitRatio())
+	output.MaxEnterUSD = maxEnterUSD
+	return output, err
 }

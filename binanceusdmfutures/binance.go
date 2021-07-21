@@ -6,14 +6,19 @@ import (
 
 type BinanceUSDMFutures struct {
 	apiURL string
+	debug  bool
 }
 
 func NewBinanceUSDMFutures() *BinanceUSDMFutures {
-	return &BinanceUSDMFutures{apiURL: "https://api.binance.com/api/v3/"}
+	return &BinanceUSDMFutures{apiURL: "https://fapi.binance.com/fapi/v1/"}
 }
 
 func (b *BinanceUSDMFutures) overrideAPIURL(url string) {
 	b.apiURL = url
+}
+
+func (b *BinanceUSDMFutures) SetDebug(debug bool) {
+	b.debug = debug
 }
 
 func (b BinanceUSDMFutures) BuildCandlestickIterator(baseAsset, quoteAsset string, initialISO8601 common.ISO8601) *common.CandlestickIterator {

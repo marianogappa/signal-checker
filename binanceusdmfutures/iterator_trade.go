@@ -14,6 +14,7 @@ func (b BinanceUSDMFutures) newTradeIterator(baseAsset, quoteAsset string, initi
 	initial, _ := initialISO8601.Time()
 	initialSeconds := int(initial.Unix())
 	return &binanceTradeIterator{
+		binance:           b,
 		baseAsset:         baseAsset,
 		quoteAsset:        quoteAsset,
 		requestFromMillis: initialSeconds * 1000,
