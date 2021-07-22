@@ -237,7 +237,7 @@ func doCheckSignal(input common.SignalCheckInput, nextTick func() (common.Tick, 
 		Input:      input,
 		HttpStatus: 200,
 	}
-	if err != nil {
+	if err != nil && err != common.ErrOutOfCandlesticks {
 		output.IsError = true
 		output.HttpStatus = 500
 		output.ErrorMessage = err.Error()
