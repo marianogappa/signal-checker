@@ -7,6 +7,7 @@ import (
 
 func GetUSDPricePerBaseAssetUnitAtEvent(exchange Exchange, input SignalCheckInput, event SignalCheckOutputEvent) (JsonFloat64, error) {
 	// If the base asset is a stablecoin that tracks the US dollar, then that's the USD price.
+	// N.B. review tests after changing this!
 	stablecoins := []string{"USDT", "USDC", "BUSD", "DAI", "USD"}
 	for _, stablecoin := range stablecoins {
 		if input.BaseAsset == stablecoin {
@@ -21,7 +22,7 @@ func GetUSDPricePerBaseAssetUnitAtEvent(exchange Exchange, input SignalCheckInpu
 		if input.QuoteAsset == stablecoin {
 			price := 1.0 / event.Price
 			if input.Debug {
-				log.Printf("GetUSDPricePerBaseAssetUnitAtEvent: quote asset is %v (USD-based stablecoin), so price is $%v (which is 1/base asset price).\n", input.BaseAsset, price)
+				log.Printf("GetUSDPricePerBaseAssetUnitAtEvent: quote asset is %v (USD-based stablecoin), so price is $%v (which is 1/base asset price).\n", input.QuoteAsset, price)
 			}
 			return price, nil
 		}
@@ -29,16 +30,18 @@ func GetUSDPricePerBaseAssetUnitAtEvent(exchange Exchange, input SignalCheckInpu
 	// If there is a market pair with the base asset against a stablecoin, get its price.
 	for _, stablecoin := range stablecoins {
 		candlestickIterator := exchange.BuildCandlestickIterator(input.BaseAsset, stablecoin, event.At)
-		price, err := candlestickIterator.GetPriceAt(event.At)
+		baseAssetPrice, err := candlestickIterator.GetPriceAt(event.At)
 		if err != nil {
 			continue
 		}
+		price := 1 / baseAssetPrice
 		if input.Debug {
 			log.Printf("GetUSDPricePerBaseAssetUnitAtEvent: found market pair %v/%v and checked base asset price in USD to be $%v\n", input.BaseAsset, stablecoin, price)
 		}
 		return price, nil
 	}
 	// Otherwise, check if there's a market pair with the base asset against known assets that go against stablecoins.
+	// N.B. review tests after changing this!
 	transitives := map[string]string{
 		"BTC": "USDT",
 		"BNB": "BUSD",
@@ -54,7 +57,7 @@ func GetUSDPricePerBaseAssetUnitAtEvent(exchange Exchange, input SignalCheckInpu
 		if err != nil {
 			continue
 		}
-		price := transitivePrice * stablecoinPrice
+		price := 1 / (transitivePrice * stablecoinPrice)
 		if input.Debug {
 			log.Printf("GetUSDPricePerBaseAssetUnitAtEvent: found transitive market pairs %v/%v -> %v/%v and checked base asset price in USD to be $%v\n", input.BaseAsset, transitiveAsset, transitiveAsset, stablecoin, price)
 		}
