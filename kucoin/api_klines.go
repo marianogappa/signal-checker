@@ -36,7 +36,7 @@ func responseToCandlesticks(data [][]string) ([]common.Candlestick, error) {
 		raw := data[i]
 		candlestick := kucoinCandlestick{}
 		if len(raw) != 7 {
-			return candlesticks, fmt.Errorf("candlestick %v has len != 12! Invalid syntax from Kucoin", i)
+			return candlesticks, fmt.Errorf("candlestick %v has len != 7! Invalid syntax from Kucoin", i)
 		}
 		rawOpenTime, err := strconv.Atoi(raw[0])
 		if err != nil {
@@ -74,7 +74,7 @@ func responseToCandlesticks(data [][]string) ([]common.Candlestick, error) {
 		}
 		candlestick.Volume = rawVolume
 
-		rawTurnover, err := strconv.ParseFloat(raw[5], 64)
+		rawTurnover, err := strconv.ParseFloat(raw[6], 64)
 		if err != nil {
 			return candlesticks, fmt.Errorf("candlestick %v has non-float turnover! Err was %v. Invalid syntax from Kucoin", i, err)
 		}

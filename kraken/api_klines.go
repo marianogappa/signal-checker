@@ -127,7 +127,7 @@ func (r response) toCandlesticks() ([]common.Candlestick, error) {
 
 		rawVWap, ok := raw[5].(string)
 		if !ok {
-			return candlesticks, fmt.Errorf("candlestick %v has non-string volume! Invalid syntax from Kraken", i)
+			return candlesticks, fmt.Errorf("candlestick %v has non-string vwap! Invalid syntax from Kraken", i)
 		}
 		vwap, err := strconv.ParseFloat(rawVWap, 64)
 		if err != nil {
