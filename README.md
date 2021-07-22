@@ -8,11 +8,11 @@ cli tool, server & library to check the results of crypto signals against an exc
 
 ## What can you do with this?
 
-Many "businesses" offer "crypto signals" (i.e. cryptocurrency market predictions) for a fee. Most cryptocurrency exchanges offer historical candlestick and trade data for free. This tool allows you to validate if the predictions are met or not.
+Many "businesses" offer "crypto signals" (i.e. cryptocurrency market predictions) for a fee, but how can you trust them? Most cryptocurrency exchanges offer historical candlestick and trade data for free. This tool allows you to validate if past predictions were met or not, so with a reasonable "signals dataset", you can fact-check if the "business" is legit or not.
 
 It's optimised for compatibility and composability: it works on your terminal, as a server and as a Go module you can import, and its inputs and outputs are JSON.
 
-## Supported exchanges
+## Supported exchanges (all major supported)
 
 - Binance
 - Binance Futures (USD-M) *is being implemented*
@@ -20,6 +20,8 @@ It's optimised for compatibility and composability: it works on your terminal, a
 - FTX
 - Kraken
 - KuCoin
+
+NOTE: Huobi does not provide historical data with sufficient granularity, so it cannot be supported.
 
 ## Feature support
 
