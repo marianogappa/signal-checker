@@ -203,7 +203,7 @@ func calculateMaxEnterUSD(exchange common.Exchange, input common.SignalCheckInpu
 		return common.JsonFloat64(0.0), err
 	}
 	tradeIterator := exchange.BuildTradeIterator(input.BaseAsset, input.QuoteAsset, enteredEvent.At)
-	maxTrade, err := tradeIterator.GetMaxBaseAssetEnter(5 /* minuteCount */, 10 /* bucketCount */, 100000 /* maxTradeCount */)
+	maxTrade, err := tradeIterator.GetMaxBaseAssetEnter(5 /* minuteCount */, 10 /* bucketCount */, 10000 /* maxTradeCount */)
 	if err != nil {
 		return common.JsonFloat64(0.0), err
 	}
