@@ -86,6 +86,7 @@ type SignalCheckInput struct {
 	// DontCalculateMaxEnterUSD prevents calculation of MaxEnterUSD, which can be expensive and lengthy.
 	DontCalculateMaxEnterUSD bool `json:"dontCalculateMaxEnterUSD"`
 
+	ReturnCandlesticks bool `json:"returnCandlesticks"`
 	// TODO add invalidateIfTPBeforeEntering
 }
 
@@ -190,6 +191,8 @@ type SignalCheckOutput struct {
 	Logs []string `json:"logs,omitempty"`
 
 	MaxEnterUSD JsonFloat64 `json:"maxEnterUSD,omitempty"`
+
+	Candlesticks []Candlestick `json:"candlesticks,omitempty"`
 }
 
 // Candlestick is the generic struct for candlestick data for all supported exchanges.

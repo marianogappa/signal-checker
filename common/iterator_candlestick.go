@@ -5,15 +5,24 @@ import (
 )
 
 type CandlestickIterator struct {
-	next func() (Candlestick, error)
+	SavedCandlesticks []Candlestick
+	next              func() (Candlestick, error)
 }
 
 func NewCandlestickIterator(next func() (Candlestick, error)) *CandlestickIterator {
-	return &CandlestickIterator{next}
+	return &CandlestickIterator{next: next, SavedCandlesticks: nil}
+}
+
+func (ci *CandlestickIterator) SaveCandlesticks() {
+	ci.SavedCandlesticks = []Candlestick{}
 }
 
 func (ci *CandlestickIterator) Next() (Candlestick, error) {
-	return ci.next()
+	cs, err := ci.next()
+	if ci.SavedCandlesticks != nil && err == nil {
+		ci.SavedCandlesticks = append(ci.SavedCandlesticks, cs)
+	}
+	return cs, err
 }
 
 func (ci *CandlestickIterator) GetPriceAt(at ISO8601) (JsonFloat64, error) {
