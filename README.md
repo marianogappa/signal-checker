@@ -2,6 +2,7 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/marianogappa/signal-checker.svg)](https://pkg.go.dev/github.com/marianogappa/signal-checker)
 [![Coverage Status](https://coveralls.io/repos/github/marianogappa/signal-checker/badge.svg?branch=main)](https://coveralls.io/github/marianogappa/signal-checker?branch=main)
+[![Go Report Card](https://goreportcard.com/badge/github.com/marianogappa/signal-checker)](https://goreportcard.com/report/github.com/marianogappa/signal-checker)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 cli tool, server & library to check the results of crypto signals against an exchange's historical data.
