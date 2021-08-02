@@ -91,6 +91,42 @@ func TestSignalChecker(t *testing.T) {
 			},
 		},
 		{
+			name: "Enters immediately",
+			input: common.SignalCheckInput{
+				EnterRangeLow:            f(-1.0),
+				EnterRangeHigh:           f(-1.0),
+				StopLoss:                 f(0.1),
+				InitialISO8601:           startISO8601,
+				InvalidateISO8601:        "",
+				InvalidateAfterSeconds:   10,
+				TakeProfits:              []common.JsonFloat64{5.0, 6.0, 7.0},
+				TakeProfitRatios:         []common.JsonFloat64{0.5, 0.25, 0.25},
+				IfTP1StopAtEntry:         false,
+				IfTP2StopAtTP1:           false,
+				IfTP3StopAtTP2:           false,
+				IfTP4StopAtTP3:           false,
+				DontCalculateMaxEnterUSD: true,
+			},
+			candlesticks: []common.Candlestick{
+				{Timestamp: startTs + 0, LowestPrice: f(0.2), HighestPrice: f(0.2), Volume: f(1.0)},
+				{Timestamp: startTs + 1, LowestPrice: f(1.0), HighestPrice: f(1.0), Volume: f(1.0)},
+				{Timestamp: startTs + 2, LowestPrice: f(0.3), HighestPrice: f(0.3), Volume: f(1.0)},
+			},
+			expected: common.SignalCheckOutput{
+				Events: []common.SignalCheckOutputEvent{
+					{EventType: common.ENTERED, At: startISO8601, Price: f(0.2)},
+					{EventType: common.FINISHED_DATASET, At: tick3, Price: f(0.3)},
+				},
+				Entered:              true,
+				FirstCandleOpenPrice: f(0.2),
+				FirstCandleAt:        startISO8601,
+				HighestTakeProfit:    0,
+				ReachedStopLoss:      false,
+				ProfitRatio:          f(0.0),
+				IsError:              false,
+			},
+		},
+		{
 			name: "Stops losses",
 			input: common.SignalCheckInput{
 				EnterRangeLow:            f(1.0),

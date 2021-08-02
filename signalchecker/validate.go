@@ -37,16 +37,16 @@ func validateInput(input common.SignalCheckInput) (common.SignalCheckOutput, err
 	if input.EnterRangeHigh < input.EnterRangeLow {
 		return invalidateWith(common.ErrEnterRangeHighIsLessThanEnterRangeLow, input)
 	}
-	if !input.IsShort && input.StopLoss != -1 && input.StopLoss >= input.EnterRangeLow {
+	if !input.IsShort && input.StopLoss != -1 && input.EnterRangeLow != -1 && input.StopLoss >= input.EnterRangeLow {
 		return invalidateWith(common.ErrStopLossIsGreaterThanOrEqualToEnterRangeLow, input)
 	}
-	if input.IsShort && input.StopLoss != -1 && input.StopLoss <= input.EnterRangeHigh {
+	if input.IsShort && input.StopLoss != -1 && input.EnterRangeHigh != -1 && input.StopLoss <= input.EnterRangeHigh {
 		return invalidateWith(common.ErrStopLossIsLessThanOrEqualToEnterRangeHigh, input)
 	}
-	if !input.IsShort && len(input.TakeProfits) > 0 && input.TakeProfits[0] <= input.EnterRangeHigh {
+	if !input.IsShort && input.EnterRangeHigh != -1 && len(input.TakeProfits) > 0 && input.TakeProfits[0] <= input.EnterRangeHigh {
 		return invalidateWith(common.ErrFirstTPIsLessThanOrEqualToEnterRangeHigh, input)
 	}
-	if input.IsShort && len(input.TakeProfits) > 0 && input.TakeProfits[0] >= input.EnterRangeLow {
+	if input.IsShort && input.EnterRangeLow != -1 && len(input.TakeProfits) > 0 && input.TakeProfits[0] >= input.EnterRangeLow {
 		return invalidateWith(common.ErrFirstTPIsGreaterThanOrEqualToEnterRangeLow, input)
 	}
 	if input.Exchange == "" {

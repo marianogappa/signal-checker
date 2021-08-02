@@ -147,7 +147,7 @@ func (s *checkSignalState) applyTick(tick common.Tick, err error) (bool, error) 
 	if s.hasInvalidAt && (tickTime.After(s.invalidAt) || tickTime.Equal(s.invalidAt)) {
 		return s.applyEvent(common.INVALIDATED, tick), nil
 	}
-	if !s.entered && tick.Price >= s.input.EnterRangeLow && tick.Price <= s.input.EnterRangeHigh {
+	if !s.entered && ((s.input.EnterRangeLow == -1 && s.input.EnterRangeHigh == -1) || (tick.Price >= s.input.EnterRangeLow && tick.Price <= s.input.EnterRangeHigh)) {
 		s.entered = true
 		return s.applyEvent(common.ENTERED, tick), nil
 	}
