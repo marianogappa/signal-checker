@@ -23,7 +23,7 @@ func NewProfitCalculator(input common.SignalCheckInput) ProfitCalculator {
 	for i := 0; i < len(input.TakeProfits); i++ {
 		if i >= len(input.TakeProfitRatios) {
 			accums = append(accums, accum)
-			break
+			continue
 		}
 		accum += float64(input.TakeProfitRatios[i])
 		accums = append(accums, accum)
