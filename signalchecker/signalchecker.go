@@ -120,12 +120,8 @@ func newChecker(input common.SignalCheckInput) *checkSignalState {
 // N.B. appyEvent returns "isEnded" boolean, to decide whether to continue.
 func (s *checkSignalState) applyEvent(eventType string, tick common.Tick) bool {
 	event := common.SignalCheckOutputEvent{EventType: eventType}
-	switch eventType {
-	case common.FINISHED_DATASET:
-	default:
-		event.At = common.ISO8601(time.Unix(int64(tick.Timestamp), 0).UTC().Format(time.RFC3339))
-		event.Price = tick.Price
-	}
+	event.At = common.ISO8601(time.Unix(int64(tick.Timestamp), 0).UTC().Format(time.RFC3339))
+	event.Price = tick.Price
 	s.events = append(s.events, event)
 	s.profitCalculator.ApplyEvent(event)
 	s.isEnded = eventType == common.FINISHED_DATASET || eventType == common.STOPPED_LOSS || s.profitCalculator.IsFinished()

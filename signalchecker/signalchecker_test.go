@@ -44,7 +44,7 @@ func TestSignalChecker(t *testing.T) {
 				{Timestamp: startTs + 2, LowestPrice: f(0.3), HighestPrice: f(0.3), Volume: f(1.0)},
 			},
 			expected: common.SignalCheckOutput{
-				Events:               []common.SignalCheckOutputEvent{{EventType: common.FINISHED_DATASET}},
+				Events:               []common.SignalCheckOutputEvent{{EventType: common.FINISHED_DATASET, At: tick3, Price: f(0.3)}},
 				Entered:              false,
 				FirstCandleOpenPrice: f(0.2),
 				FirstCandleAt:        startISO8601,
@@ -79,7 +79,7 @@ func TestSignalChecker(t *testing.T) {
 			expected: common.SignalCheckOutput{
 				Events: []common.SignalCheckOutputEvent{
 					{EventType: common.ENTERED, At: tick2, Price: f(1.0)},
-					{EventType: common.FINISHED_DATASET},
+					{EventType: common.FINISHED_DATASET, At: tick3, Price: f(0.3)},
 				},
 				Entered:              true,
 				FirstCandleOpenPrice: f(0.2),
@@ -152,7 +152,7 @@ func TestSignalChecker(t *testing.T) {
 				Events: []common.SignalCheckOutputEvent{
 					{EventType: common.ENTERED, At: tick2, Price: f(1.0)},
 					{EventType: common.TAKEN_PROFIT_ + "1", At: tick3, Price: f(5.0)},
-					{EventType: common.FINISHED_DATASET},
+					{EventType: common.FINISHED_DATASET, At: tick3, Price: f(5.0)},
 				},
 				Entered:              true,
 				FirstCandleOpenPrice: f(0.2),
@@ -204,7 +204,7 @@ func TestSignalChecker(t *testing.T) {
 	}
 	for _, ts := range tss {
 		t.Run(ts.name, func(t *testing.T) {
-			actual, err := doCheckSignal(ts.input, buildTickIterator(testCandlestickIterator(ts.candlesticks)))
+			actual, err := doCheckSignal(ts.input, common.NewCandlestickIterator(testCandlestickIterator(ts.candlesticks)))
 			if actual.IsError && err == nil {
 				t.Error("Output says there is an error but function did not return an error!")
 				t.FailNow()
@@ -244,11 +244,13 @@ func f(fl float64) common.JsonFloat64 {
 
 func testCandlestickIterator(cs []common.Candlestick) func() (common.Candlestick, error) {
 	i := 0
+	last := common.Candlestick{}
 	return func() (common.Candlestick, error) {
 		if i >= len(cs) {
-			return common.Candlestick{}, common.ErrOutOfCandlesticks
+			return last, common.ErrOutOfCandlesticks
 		}
 		i++
+		last = cs[i-1]
 		return cs[i-1], nil
 	}
 }
