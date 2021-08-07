@@ -2,33 +2,45 @@ package profitcalculator
 
 import (
 	"log"
-	"strconv"
-	"strings"
 
 	"github.com/marianogappa/signal-checker/common"
 )
 
 type ProfitCalculator struct {
 	input             common.SignalCheckInput
-	putIn             float64
 	price             float64
-	tookOut           float64
-	accumRatios       []float64
+	tpCumRatios       []float64 // 0-based
+	entryCumRatios    []float64 // 0-based
 	appliedEventCount int
+	highestEntered    int // 1-based
+	lastEventType     string
+
+	awaitingEnter float64
+	putIn         float64
+	tookOut       float64
+}
+
+func calculateCumulativeRatios(requiredLen int, ratios []common.JsonFloat64) []float64 {
+	cum := 0.0
+	cums := []float64{}
+	for i := 0; i < requiredLen; i++ {
+		if i >= len(ratios) {
+			cums = append(cums, cum)
+			continue
+		}
+		cum += float64(ratios[i])
+		cums = append(cums, cum)
+	}
+	return cums
 }
 
 func NewProfitCalculator(input common.SignalCheckInput) ProfitCalculator {
-	accum := 0.0
-	accums := []float64{}
-	for i := 0; i < len(input.TakeProfits); i++ {
-		if i >= len(input.TakeProfitRatios) {
-			accums = append(accums, accum)
-			continue
-		}
-		accum += float64(input.TakeProfitRatios[i])
-		accums = append(accums, accum)
+	return ProfitCalculator{
+		input:          input,
+		tpCumRatios:    calculateCumulativeRatios(len(input.TakeProfits), input.TakeProfitRatios),
+		entryCumRatios: calculateCumulativeRatios(max(1, len(input.Entries)), input.EntryRatios),
+		awaitingEnter:  1.0,
 	}
-	return ProfitCalculator{input: input, accumRatios: accums}
 }
 
 func (p *ProfitCalculator) ApplyEvent(event common.SignalCheckOutputEvent) float64 {
@@ -36,66 +48,94 @@ func (p *ProfitCalculator) ApplyEvent(event common.SignalCheckOutputEvent) float
 		log.Printf("ProfitCalculator: applying event '%v' with price %v\n", event.EventType, event.Price)
 	}
 	p.appliedEventCount++
+
+	// TODO: LONG-only!
+	if p.putIn > 0 {
+		p.putIn *= float64(event.Price) / p.price
+	}
+
 	switch event.EventType {
 	case common.ENTERED:
-		p.putIn = 1.0
-		p.tookOut = 0.0
-		p.price = float64(event.Price)
-	case common.STOPPED_LOSS, common.INVALIDATED:
+		// Rarely, there's an entry after all entryRatio has been used. In this case, entry is ignored.
+		if p.awaitingEnter == 0 {
+			break
+		}
+		// On most cases, signal will enter the first entry target.
+		// However, sometimes the first entry will be a different target.
+		// In this case, the cumulative entry ratio has to be calculated.
+		// This is done by first calculating the cumulative of the last entry:
+		cumLastEntry := 0.0
+		if p.highestEntered > 0 {
+			cumLastEntry = p.entryCumRatios[p.highestEntered-1]
+		}
+
+		// Then calculating the cumulative of the current entry:
+		cumCurrentEntry := p.entryCumRatios[event.Target-1]
+
+		// And calculating the difference between them:
+		enterWith := cumCurrentEntry - cumLastEntry
+
+		p.highestEntered = event.Target
+		p.awaitingEnter -= enterWith
+		p.putIn += enterWith
+	case common.STOPPED_LOSS, common.INVALIDATED, common.FINISHED_DATASET:
+		// All balance awaiting enter should never enter again, so take it out
+		p.tookOut += p.awaitingEnter
+		p.awaitingEnter = 0
+
+		if p.putIn == 0 && event.EventType == common.STOPPED_LOSS {
+			if p.input.Debug {
+				log.Println("ProfitCalculator: stopped loss without entering. This is likely a bug!")
+			}
+			break
+		}
 		if p.appliedEventCount == 1 {
 			if p.input.Debug {
 				log.Println("ProfitCalculator: invalidating at first event. Likely signal out-of-sync with data.")
 			}
-			return 0.0
-		}
-		if !p.input.IsShort {
-			p.putIn *= float64(event.Price) / p.price
-		} else {
-			p.putIn *= p.price / float64(event.Price)
+			break
 		}
 		p.tookOut += p.putIn
 		p.putIn = 0
-		p.price = float64(event.Price)
-	default:
-		if len(event.EventType) <= 13 || event.EventType[:13] != common.TAKEN_PROFIT_ {
-			// N.B. invalid event types are not considered possible
+	case common.TOOK_PROFIT:
+		// Once having taken profit, all balance awaiting enter should never enter again, so take it out
+		p.tookOut += p.awaitingEnter
+		p.awaitingEnter = 0
+
+		if p.putIn == 0 {
 			if p.input.Debug {
-				log.Println("ProfitCalculator: found invalid event type. This is likely a bug!")
+				log.Println("ProfitCalculator: took profit without entering. This is likely a bug!")
 			}
-			return 0.0
+			break
 		}
-		n, err := strconv.Atoi(strings.Split(event.EventType, common.TAKEN_PROFIT_)[1])
-		if err != nil {
-			// N.B. invalid event types are not considered possible
-			if p.input.Debug {
-				log.Println("ProfitCalculator: found invalid event type. This is likely a bug!")
-			}
-			return 0.0
-		}
-		if !p.input.IsShort {
-			p.putIn *= float64(event.Price) / p.price
-		} else {
-			p.putIn *= p.price / float64(event.Price)
-		}
-		takeOut := p.putIn * p.accumRatios[n-1]
+		takeOut := p.putIn * p.tpCumRatios[event.Target-1]
 		p.putIn -= takeOut
 		p.tookOut += takeOut
-		p.price = float64(event.Price)
+	default:
+		if p.input.Debug {
+			log.Println("ProfitCalculator: found invalid event type. This is likely a bug!")
+		}
 	}
+	p.lastEventType = event.EventType
+	p.price = float64(event.Price)
 	return p.CalculateTakeProfitRatio()
 }
 
 func (p ProfitCalculator) IsFinished() bool {
-	return p.putIn == 0.0
+	return p.awaitingEnter+p.putIn == 0.0
 }
 
 func (p ProfitCalculator) CalculateTakeProfitRatio() float64 {
-	if p.putIn+p.tookOut == 0 {
-		return 0
-	}
-	tpr := (p.putIn + p.tookOut) - 1
+	tpr := (p.awaitingEnter + p.putIn + p.tookOut) - 1
 	if p.input.Debug {
-		log.Printf("ProfitCalculator: still in = %v, taken out = %v. Take profit ratio =  %v\n", p.putIn, p.tookOut, tpr)
+		log.Printf("ProfitCalculator: awaiting enter = %v, still in = %v, taken out = %v. Take profit ratio =  %v\n", p.awaitingEnter, p.putIn, p.tookOut, tpr)
 	}
 	return tpr
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }

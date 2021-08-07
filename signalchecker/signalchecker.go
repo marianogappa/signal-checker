@@ -4,7 +4,7 @@
 //
 // If you are importing the package, use it like this:
 //
-// output, err := signalchecker.CheckSignal(input)
+// output, err := signalchecker.NewSignalChecker(input).Check()
 //
 // Note that the output contains richer information about the error than err itself, but you can still use err if it
 // reads better in your code.
@@ -15,8 +15,6 @@
 package signalchecker
 
 import (
-	"errors"
-	"fmt"
 	"log"
 	"time"
 
@@ -24,6 +22,7 @@ import (
 	"github.com/marianogappa/signal-checker/binanceusdmfutures"
 	"github.com/marianogappa/signal-checker/coinbase"
 	"github.com/marianogappa/signal-checker/common"
+	"github.com/marianogappa/signal-checker/fake"
 	"github.com/marianogappa/signal-checker/ftx"
 	"github.com/marianogappa/signal-checker/kraken"
 	"github.com/marianogappa/signal-checker/kucoin"
@@ -41,23 +40,46 @@ var (
 	}
 )
 
-// CheckSignal is the main method of this project, and runs a signal check based on the provided SignalCheckInput.
-// Please review the docs on the common.SignalCheckInput and common.SignalCheckOutput common.
-func CheckSignal(input common.SignalCheckInput) (common.SignalCheckOutput, error) {
-	validationResult, err := validateInput(input)
+// SignalChecker is the main struct does that the signal checking.
+// Use it like this: output, err := signalchecker.NewSignalChecker(input).Check()
+// Please review the docs on the common.SignalCheckInput and common.SignalCheckOutput.
+type SignalChecker struct {
+	input    common.SignalCheckInput
+	exchange common.Exchange
+
+	// For testing
+	mockCandlesticks []common.Candlestick
+	mockTrades       []common.Trade
+	mockReturnErr    error
+}
+
+// NewSignalChecker is the constructor for SignalChecker.
+// Use it like this: output, err := signalchecker.NewSignalChecker(input).Check()
+// Please review the docs on the common.SignalCheckInput and common.SignalCheckOutput.
+func NewSignalChecker(input common.SignalCheckInput) *SignalChecker {
+	return &SignalChecker{input: input}
+}
+
+// Check is the main method on SignalChecker that does the actual checking.
+// Use it like this: output, err := signalchecker.NewSignalChecker(input).Check()
+// Please review the docs on the common.SignalCheckInput and common.SignalCheckOutput.
+func (c SignalChecker) Check() (common.SignalCheckOutput, error) {
+	validationResult, err := validateInput(c.input)
 	if err != nil {
 		return validationResult, err
 	}
-	input = validationResult.Input
-	log.Printf("Input validation ok. Input: %+v\n", input)
+	c.input = validationResult.Input
+	if c.input.Debug {
+		log.Printf("Input validation ok. Input: %+v\n", c.input)
+	}
+	c.exchange = exchanges[c.input.Exchange]
 
-	var (
-		exchange            = exchanges[input.Exchange]
-		candlestickIterator = exchange.BuildCandlestickIterator(input.BaseAsset, input.QuoteAsset, input.InitialISO8601)
-	)
-	exchange.SetDebug(input.Debug)
+	if c.mockCandlesticks != nil || c.mockTrades != nil {
+		c.exchange = fake.NewFake(c.mockCandlesticks, c.mockTrades, c.mockReturnErr)
+	}
+	c.exchange.SetDebug(c.input.Debug)
 
-	return doCheckSignal(input, candlestickIterator)
+	return c.doCheck()
 }
 
 func resolveInvalidAt(input common.SignalCheckInput) (time.Time, bool) {
@@ -88,9 +110,9 @@ type checkSignalState struct {
 	input                common.SignalCheckInput
 	profitCalculator     profitcalculator.ProfitCalculator
 	first                bool
-	entered              bool
 	reachedStopLoss      bool
 	highestTakeProfit    int
+	highestEntry         int
 	firstCandleOpenPrice common.JsonFloat64
 	firstCandleAt        common.ISO8601
 	invalidAt            time.Time
@@ -118,45 +140,76 @@ func newChecker(input common.SignalCheckInput) *checkSignalState {
 }
 
 // N.B. appyEvent returns "isEnded" boolean, to decide whether to continue.
-func (s *checkSignalState) applyEvent(eventType string, tick common.Tick) bool {
+func (s *checkSignalState) applyEvent(eventType string, target int, tick common.Tick) bool {
 	event := common.SignalCheckOutputEvent{EventType: eventType}
+	event.Target = target
 	event.At = common.ISO8601(time.Unix(int64(tick.Timestamp), 0).UTC().Format(time.RFC3339))
 	event.Price = tick.Price
+	event.ProfitRatio = common.JsonFloat64(s.profitCalculator.ApplyEvent(event))
 	s.events = append(s.events, event)
-	s.profitCalculator.ApplyEvent(event)
 	s.isEnded = eventType == common.FINISHED_DATASET || eventType == common.STOPPED_LOSS || s.profitCalculator.IsFinished()
 	return s.isEnded
 }
 
 func (s *checkSignalState) applyTick(tick common.Tick, err error) (bool, error) {
 	if err == common.ErrOutOfCandlesticks {
-		return s.applyEvent(common.FINISHED_DATASET, tick), err
+		return s.applyEvent(common.FINISHED_DATASET, 0, tick), err
 	}
 	if err != nil {
 		return true, err
 	}
 	tickTime := time.Unix(int64(tick.Timestamp), 0)
+
+	// Ignore candlesticks before the signal's initial time.
 	if tickTime.Before(s.initialTime) {
 		return false, nil
 	}
+
+	// Save the first read candlestick WITHIN the signal's initial time (the first tick is the open price of the first
+	// candlestick).
 	if s.first {
 		s.first = false
 		s.firstCandleOpenPrice = tick.Price
 		s.firstCandleAt = common.ISO8601(tickTime.UTC().Format(time.RFC3339))
 	}
+
+	// If the tick's time is >= the invalidation time, finish here.
 	if s.hasInvalidAt && (tickTime.After(s.invalidAt) || tickTime.Equal(s.invalidAt)) {
-		return s.applyEvent(common.INVALIDATED, tick), nil
+		return s.applyEvent(common.INVALIDATED, 0, tick), nil
 	}
-	if !s.entered && ((s.input.EnterRangeLow == -1 && s.input.EnterRangeHigh == -1) || (tick.Price >= s.input.EnterRangeLow && tick.Price <= s.input.EnterRangeHigh)) {
-		s.entered = true
-		return s.applyEvent(common.ENTERED, tick), nil
+
+	// If we haven't entered yet, or there are multiple entries and we're able to enter further, calculate so
+	if (s.highestEntry == 0 && len(s.input.Entries) == 0) ||
+		(len(s.input.Entries) >= s.highestEntry+2 && ((!s.input.IsShort && tick.Price >= s.input.Entries[s.highestEntry+1] && tick.Price < s.input.Entries[s.highestEntry]) ||
+			(s.input.IsShort && tick.Price > s.input.Entries[s.highestEntry] && tick.Price <= s.input.Entries[s.highestEntry+1]))) {
+
+		// Go backwards from furthest possible remaining entry, and enter the first range that the price is in
+		for i := len(s.input.Entries) - 1; i >= s.highestEntry+1; i-- {
+			if (!s.input.IsShort && tick.Price >= s.input.Entries[i] && tick.Price < s.input.Entries[i-1]) ||
+				(s.input.IsShort && tick.Price <= s.input.Entries[i] && tick.Price > s.input.Entries[i-1]) {
+				s.highestEntry = i
+				break
+			}
+		}
+
+		// If there are no entries at all, this must be the first and only entry
+		if len(s.input.Entries) == 0 {
+			s.highestEntry = 1
+		}
+		return s.applyEvent(common.ENTERED, s.highestEntry, tick), nil
 	}
-	if s.entered && ((!s.input.IsShort && tick.Price <= s.stopLoss) || (s.input.IsShort && tick.Price >= s.stopLoss)) {
+
+	// If we entered, and price <= stopLoss (for LONG) or >= stopLoss (for SHORT), then we reached stop loss.
+	if s.highestEntry > 0 && ((!s.input.IsShort && tick.Price <= s.stopLoss) || (s.input.IsShort && tick.Price >= s.stopLoss)) {
 		s.reachedStopLoss = true
-		return s.applyEvent(common.STOPPED_LOSS, tick), nil
+		return s.applyEvent(common.STOPPED_LOSS, 0, tick), nil
 	}
-	if s.entered && s.highestTakeProfit < len(s.input.TakeProfits) &&
+
+	// If we have entered and there are TPs and we're able to take profit further, calculate so
+	if s.highestEntry > 0 && s.highestTakeProfit < len(s.input.TakeProfits) &&
 		((!s.input.IsShort && tick.Price >= s.input.TakeProfits[s.highestTakeProfit]) || (s.input.IsShort && tick.Price <= s.input.TakeProfits[s.highestTakeProfit])) {
+
+		// Go backwards from furthest possible TP, and take profit on the first range that the price is in
 		for i := len(s.input.TakeProfits) - 1; i >= s.highestTakeProfit; i-- {
 			if (!s.input.IsShort && tick.Price < s.input.TakeProfits[i]) || (s.input.IsShort && tick.Price > s.input.TakeProfits[i]) {
 				continue
@@ -164,7 +217,7 @@ func (s *checkSignalState) applyTick(tick common.Tick, err error) (bool, error) 
 			s.highestTakeProfit = i + 1
 			break
 		}
-		s.applyEvent(fmt.Sprintf("%v%v", common.TAKEN_PROFIT_, s.highestTakeProfit), tick)
+		s.applyEvent(common.TOOK_PROFIT, s.highestTakeProfit, tick)
 		if s.isEnded || s.highestTakeProfit == len(s.input.TakeProfits) {
 			return true, nil
 		}
@@ -179,46 +232,16 @@ func (s *checkSignalState) applyTick(tick common.Tick, err error) (bool, error) 
 	return false, nil
 }
 
-func getEnteredEvent(events []common.SignalCheckOutputEvent) (common.SignalCheckOutputEvent, bool) {
-	for _, event := range events {
-		if event.EventType == common.ENTERED {
-			return event, true
-		}
-	}
-	return common.SignalCheckOutputEvent{}, false
-}
-
-func calculateMaxEnterUSD(exchange common.Exchange, input common.SignalCheckInput, events []common.SignalCheckOutputEvent) (common.JsonFloat64, error) {
-	enteredEvent, ok := getEnteredEvent(events)
-	if !ok {
-		return common.JsonFloat64(0.0), errors.New("this signal did not enter so cannot calculate maxEnterUSD")
-	}
-	usdPricePerBaseAsset, err := common.GetUSDPricePerBaseAssetUnitAtEvent(exchange, input, enteredEvent)
-	if err != nil {
-		return common.JsonFloat64(0.0), err
-	}
-	tradeIterator := exchange.BuildTradeIterator(input.BaseAsset, input.QuoteAsset, enteredEvent.At)
-	maxTrade, err := tradeIterator.GetMaxBaseAssetEnter(5 /* minuteCount */, 10 /* bucketCount */, 10000 /* maxTradeCount */)
-	if err != nil {
-		return common.JsonFloat64(0.0), err
-	}
-	maxEnterUSD := usdPricePerBaseAsset * maxTrade.BaseAssetQuantity
-	if input.Debug {
-		log.Printf("calculateMaxEnterUSD: best-ish quantity trade was %v units of %v/%v at a price of %.6f (but entered price was %.6f!!), which is a USD price of ~$%.6f per unit, totalling ~$%.6f\n",
-			maxTrade.BaseAssetQuantity, input.BaseAsset, input.QuoteAsset, maxTrade.BaseAssetPrice, enteredEvent.Price, usdPricePerBaseAsset, maxEnterUSD)
-	}
-	return maxEnterUSD, nil
-}
-
-func doCheckSignal(input common.SignalCheckInput, candlestickIterator *common.CandlestickIterator) (common.SignalCheckOutput, error) {
+func (c SignalChecker) doCheck() (common.SignalCheckOutput, error) {
 	var (
-		checker     = newChecker(input)
-		err         error
-		isEnded     bool
-		maxEnterUSD common.JsonFloat64
-		nextTick    = buildTickIterator(candlestickIterator.Next)
+		candlestickIterator = c.exchange.BuildCandlestickIterator(c.input.BaseAsset, c.input.QuoteAsset, c.input.InitialISO8601)
+		checker             = newChecker(c.input)
+		err                 error
+		isEnded             bool
+		maxEnterUSD         common.JsonFloat64
+		nextTick            = buildTickIterator(candlestickIterator.Next)
 	)
-	if input.ReturnCandlesticks {
+	if c.input.ReturnCandlesticks {
 		candlestickIterator.SaveCandlesticks()
 	}
 	for {
@@ -226,14 +249,14 @@ func doCheckSignal(input common.SignalCheckInput, candlestickIterator *common.Ca
 			break
 		}
 	}
-	if isEnded && (err == nil || err == common.ErrOutOfCandlesticks) && !input.DontCalculateMaxEnterUSD {
-		maxEnterUSD, err = calculateMaxEnterUSD(exchanges[input.Exchange], input, checker.events)
+	if isEnded && (err == nil || err == common.ErrOutOfCandlesticks) && !c.input.DontCalculateMaxEnterUSD {
+		maxEnterUSD, err = calculateMaxEnterUSD(c.exchange, c.input, checker.events)
 		if err != nil {
 			log.Println(err)
 		}
 	}
 	output := common.SignalCheckOutput{
-		Input:      input,
+		Input:      c.input,
 		HttpStatus: 200,
 	}
 	if err != nil && err != common.ErrOutOfCandlesticks {
@@ -242,8 +265,9 @@ func doCheckSignal(input common.SignalCheckInput, candlestickIterator *common.Ca
 		output.ErrorMessage = err.Error()
 	}
 	output.Events = checker.events
-	output.Input = input
-	output.Entered = checker.entered
+	output.Input = c.input
+	output.Entered = checker.highestEntry > 0
+	output.HighestEntry = checker.highestEntry
 	output.FirstCandleOpenPrice = checker.firstCandleOpenPrice
 	output.FirstCandleAt = checker.firstCandleAt
 	output.HighestTakeProfit = checker.highestTakeProfit

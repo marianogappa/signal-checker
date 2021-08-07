@@ -64,7 +64,7 @@ import (
 
 func main() {
         input := common.SignalCheckInput{<input data>}
-        output, _ := signalchecker.CheckSignal(input)
+        output, _ := signalchecker.NewSignalChecker(input).Check()
   	byts, err := json.MarshalIndent(output, "", "  ")
 	if err != nil {
 		log.Fatal(err)

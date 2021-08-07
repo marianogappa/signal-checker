@@ -29,24 +29,32 @@ func validateInput(input common.SignalCheckInput) (common.SignalCheckOutput, err
 	input.Exchange = strings.ToLower(input.Exchange)
 	input.BaseAsset = strings.ToUpper(input.BaseAsset)
 	input.QuoteAsset = strings.ToUpper(input.QuoteAsset)
+	if len(input.EntryRatios) == 0 {
+		input.EntryRatios = []common.JsonFloat64{1.0}
+	}
+	if sum(input.EntryRatios) != 1.0 {
+		return invalidateWith(common.ErrEntryRatiosMustAddUpToOne, input)
+	}
+	if len(input.Entries) == 1 {
+		return invalidateWith(common.ErrInvalidEntriesLength, input)
+	}
 	if !input.IsShort {
 		sort.Slice(input.TakeProfits, func(i, j int) bool { return input.TakeProfits[i] < input.TakeProfits[j] })
+		sort.Slice(input.Entries, func(i, j int) bool { return input.Entries[i] > input.Entries[j] })
 	} else {
 		sort.Slice(input.TakeProfits, func(i, j int) bool { return input.TakeProfits[i] > input.TakeProfits[j] })
+		sort.Slice(input.Entries, func(i, j int) bool { return input.Entries[i] < input.Entries[j] })
 	}
-	if input.EnterRangeHigh < input.EnterRangeLow {
-		return invalidateWith(common.ErrEnterRangeHighIsLessThanEnterRangeLow, input)
-	}
-	if !input.IsShort && input.StopLoss != -1 && input.EnterRangeLow != -1 && input.StopLoss >= input.EnterRangeLow {
+	if !input.IsShort && input.StopLoss != -1 && len(input.Entries) > 0 && input.StopLoss >= input.Entries[len(input.Entries)-1] {
 		return invalidateWith(common.ErrStopLossIsGreaterThanOrEqualToEnterRangeLow, input)
 	}
-	if input.IsShort && input.StopLoss != -1 && input.EnterRangeHigh != -1 && input.StopLoss <= input.EnterRangeHigh {
+	if input.IsShort && input.StopLoss != -1 && len(input.Entries) > 0 && input.StopLoss <= input.Entries[len(input.Entries)-1] {
 		return invalidateWith(common.ErrStopLossIsLessThanOrEqualToEnterRangeHigh, input)
 	}
-	if !input.IsShort && input.EnterRangeHigh != -1 && len(input.TakeProfits) > 0 && input.TakeProfits[0] <= input.EnterRangeHigh {
+	if !input.IsShort && len(input.Entries) > 0 && len(input.TakeProfits) > 0 && input.TakeProfits[0] <= input.Entries[0] {
 		return invalidateWith(common.ErrFirstTPIsLessThanOrEqualToEnterRangeHigh, input)
 	}
-	if input.IsShort && input.EnterRangeLow != -1 && len(input.TakeProfits) > 0 && input.TakeProfits[0] >= input.EnterRangeLow {
+	if input.IsShort && len(input.Entries) > 0 && len(input.TakeProfits) > 0 && input.TakeProfits[0] >= input.Entries[0] {
 		return invalidateWith(common.ErrFirstTPIsGreaterThanOrEqualToEnterRangeLow, input)
 	}
 	if input.Exchange == "" {
@@ -54,7 +62,7 @@ func validateInput(input common.SignalCheckInput) (common.SignalCheckOutput, err
 	}
 	if input.Exchange != "binance" && input.Exchange != "ftx" && input.Exchange != "coinbase" &&
 		input.Exchange != "huobi" && input.Exchange != "kraken" && input.Exchange != "kucoin" &&
-		input.Exchange != "binanceusdmfutures" {
+		input.Exchange != "binanceusdmfutures" && input.Exchange != "fake" {
 		return invalidateWith(common.ErrInvalidExchange, input)
 	}
 	if input.InitialISO8601 == "" {

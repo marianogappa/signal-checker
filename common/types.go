@@ -26,17 +26,51 @@ type SignalCheckInput struct {
 	// QuoteAsset is USDT in LTCUSDT
 	QuoteAsset string `json:"quoteAsset"`
 
-	// EnterRangeLow is the minimum (inclusive) value at which to enter signal (-1 for enter immediately)
-	EnterRangeLow JsonFloat64 `json:"enterRangeLow"`
+	// Entries are the price ranges at which the checker should "buy in".
+	//
+	// There may be an arbitrary number of ranges, and ranges are subsequent to each other.
+	//
+	// Entries ranges may be specified in any order, as the order will be informed by whether the signal is a
+	// LONG/SHORT, but it's recommended to match the EntryRatios order, because it will be confusing to you otherwise.
+	//
+	// Any overlap with TP/SL will be considered an error.
+	//
+	// Entries can be an empty array or nil, in which case the check "buys in" immediately.
+	//
+	// e.g. to enter immediately:                                             entries: []
+	// e.g. to enter 100% between 0.1 and 0.5:                                entries: [0.1, 0.5]
+	// e.g. to enter some between 0.5 and 0.3, and more between 0.3 and 0.1:  entries: [0.5, 0.3, 0.1]
+	Entries []JsonFloat64 `json:"entries"`
 
-	// EnterRangeHigh is the maximum (inclusive) value at which to enter signal (-1 for enter immediately)
-	EnterRangeHigh JsonFloat64 `json:"enterRangeHigh"`
+	// EntryRatios are the ratios (i.e. array of 0 to 1) with respect to the capital to invest in this signal that the
+	// checker should "buy in" with at each of the entry ranges.
+	//
+	// It defaults to [1], that is, to enter fully at the first entry.
+	//
+	// Ratios must be specified in the order that they would be entered, and they must add up to 1.
+	//
+	// e.g. to enter with 25% of capital at Entry 1 and 75% at Entry 2:  entryRatios: [0.25, 0.75]
+	//
+	// If the checker encounters Entry 2 before Entry 1, it will enter with the cumulative ratio of both entries.
+	EntryRatios []JsonFloat64 `json:"entryRatios"`
 
 	// IsShort defines if this signal is for a LONG or a SHORT. Defaults to LONG.
 	IsShort bool `json:"isShort"`
 
 	// TakeProfits are the prices at which to take profits (empty for no take profits)
 	TakeProfits []JsonFloat64 `json:"takeProfits"`
+
+	// TakeProfitRatios is used to calculate profitRatio, that is, how much would have been the profit/loss of
+	// following the signal.
+	// A value of [0.25, 0.5, 0.25] means taking out 25% of the total entered at TP1, 75% of the remaining at TP2 and
+	// all the remaining at TP3.
+	// TakeProfitRatios needn't match the array size of TakeProfits, e.g. [1.0] would be a valid value that takes all
+	// on TP1, ignoring other TPs.
+	// TakeProfitRatios values must sum up to 1.0.
+	// If TakeProfitRatios is set so that everything is taken out early in the signal (e.g. TP1 on a signal with 3 TPs),
+	// signal-checker will stop evaluating candlesticks once everything was taken out rather than checking if further
+	// TPs were reached.
+	TakeProfitRatios []JsonFloat64 `json:"takeProfitRatios"`
 
 	// StopLoss is the price at which to stop loss (-1 for no stop loss)
 	StopLoss JsonFloat64 `json:"stopLoss"`
@@ -59,18 +93,6 @@ type SignalCheckInput struct {
 	// Debug decides whether to turn debug mode on, which means verbose stderr output.
 	Debug bool `json:"debug"`
 
-	// TakeProfitRatios is used to calculate profitRatio, that is, how much would have been the profit/loss of
-	// following the signal.
-	// A value of [0.25, 0.5, 0.25] means taking out 25% of the total entered at TP1, 75% of the remaining at TP2 and
-	// all the remaining at TP3.
-	// TakeProfitRatios needn't match the array size of TakeProfits, e.g. [1.0] would be a valid value that takes all
-	// on TP1, ignoring other TPs.
-	// TakeProfitRatios values must sum up to 1.0.
-	// If TakeProfitRatios is set so that everything is taken out early in the signal (e.g. TP1 on a signal with 3 TPs),
-	// signal-checker will stop evaluating candlesticks once everything was taken out rather than checking if further
-	// TPs were reached.
-	TakeProfitRatios []JsonFloat64 `json:"takeProfitRatios"`
-
 	// IfTP1StopAtEntry is a boolean that, if set, changes the stop loss to entry if TP1 is reached.
 	IfTP1StopAtEntry bool `json:"ifTP1StopAtEntry"`
 
@@ -86,6 +108,8 @@ type SignalCheckInput struct {
 	// DontCalculateMaxEnterUSD prevents calculation of MaxEnterUSD, which can be expensive and lengthy.
 	DontCalculateMaxEnterUSD bool `json:"dontCalculateMaxEnterUSD"`
 
+	// ReturnCandlesticks decides if all input candlesticks should be returned with the output. This could span MBs,
+	// so should only be set when needed, e.g. to plot a candlestick chart.
 	ReturnCandlesticks bool `json:"returnCandlesticks"`
 	// TODO add invalidateIfTPBeforeEntering
 }
@@ -95,7 +119,7 @@ const (
 	STOPPED_LOSS     = "stopped_loss"
 	INVALIDATED      = "invalidated"
 	FINISHED_DATASET = "finished_dataset"
-	TAKEN_PROFIT_    = "taken_profit_"
+	TOOK_PROFIT      = "took_profit"
 
 	BINANCE              = "binance"
 	FTX                  = "ftx"
@@ -104,18 +128,27 @@ const (
 	KRAKEN               = "kraken"
 	KUCOIN               = "kucoin"
 	BINANCE_USDM_FUTURES = "binanceusdmfutures"
+
+	// Used for testing
+	FAKE = "fake"
 )
 
 // SignalCheckOutputEvent is an event that happened upon checking a signal.
 type SignalCheckOutputEvent struct {
-	// EventType is one of entered, taken_profit_1, taken_profit_2, ..., stopped_loss, invalidated, finished_dataset.
+	// EventType is one of entered, took_profit, stopped_loss, invalidated, finished_dataset.
 	EventType string `json:"eventType"`
 
+	// Target is, in the case of 'entered' and 'took_profit', which entry or take profit target, e.g. TP1, TP2.
+	Target int `json:"target,omitempty"`
+
 	// Price is the floating point number for the given asset pair on the given exchange at the time of this event.
-	Price JsonFloat64 `json:"price,omitempty"`
+	Price JsonFloat64 `json:"price"`
 
 	// At is the ISO8601 datetime given by the exchange API at which this event happened.
-	At ISO8601 `json:"at,omitempty"`
+	At ISO8601 `json:"at"`
+
+	// ProfitRatio answers how much the profit/loss of this signal is up to this point.
+	ProfitRatio JsonFloat64 `json:"takeProfitRatio"`
 }
 
 type ISO8601 string
@@ -151,10 +184,15 @@ type SignalCheckOutput struct {
 	// Entered is a boolean that answers if, upon checking this signal, the checker decided to buy the base asset.
 	Entered bool `json:"entered"`
 
-	// FirstCandleOpenPrice is the first price observed at the opening of the first checked candlestick.
+	// HighestEntry is the highest entry that, upon checking this signal, the checker decided to buy the base asset.
+	HighestEntry int `json:"highestEntry"`
+
+	// FirstCandleOpenPrice is the first price observed at the opening of the first checked candlestick which was
+	// in or after the signal's initial time.
 	FirstCandleOpenPrice JsonFloat64 `json:"firstCandleOpenPrice"`
 
-	// FirstCandleAt is the ISO8601 datetime at which the first checked candlestick opened.
+	// FirstCandleAt is the ISO8601 datetime at which the first checked candlestick (which was in or after the signal's
+	// initial time) opened.
 	FirstCandleAt ISO8601 `json:"firstCandleAt"`
 
 	// HighestTakeProfit is the highest take profit reached from the signal input (0 means none were reached).
@@ -260,7 +298,8 @@ var (
 	ErrOutOfTrades                                 = errors.New("exchange ran out of trades")
 	ErrInvalidMarketPair                           = errors.New("market pair does not exist on exchange")
 	ErrRateLimit                                   = errors.New("exchange asked us to enhance our calm")
-	ErrEnterRangeHighIsLessThanEnterRangeLow       = errors.New("enterRangeHigh is < enterRangeLow")
+	ErrInvalidEntriesLength                        = errors.New("entries must either be empty or have two values or more (because a range is made of at least 2 numbers)")
+	ErrEntryRatiosMustAddUpToOne                   = errors.New("entryRatios must add up to 1")
 	ErrStopLossIsGreaterThanOrEqualToEnterRangeLow = errors.New("stopLoss is >= enterRangeLow; if you want no stopLoss, set the value to -1")
 	ErrStopLossIsLessThanOrEqualToEnterRangeHigh   = errors.New("stopLoss is <= enterRangeHigh; if you want no stopLoss, set the value to -1")
 	ErrFirstTPIsLessThanOrEqualToEnterRangeHigh    = errors.New("first take profit is <= enterRangeHigh")

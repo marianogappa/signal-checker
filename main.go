@@ -39,7 +39,7 @@ func serveCheck(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	output, _ := signalchecker.CheckSignal(input)
+	output, _ := signalchecker.NewSignalChecker(input).Check()
 	w.WriteHeader(output.HttpStatus)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(output)
@@ -57,7 +57,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	output, _ := signalchecker.CheckSignal(input)
+	output, _ := signalchecker.NewSignalChecker(input).Check()
 	byts, err := json.MarshalIndent(output, "", "  ")
 	if err != nil {
 		log.Fatal(err)
