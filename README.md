@@ -7,6 +7,8 @@
 
 cli tool, server & library to check the results of crypto signals against an exchange's historical data.
 
+⚠️⚠️⚠️ Warning: API unstable, important parts still missing (e.g. SHORT signal support) ⚠️⚠️⚠️
+
 ## What can you do with this?
 
 Many "businesses" offer "crypto signals" (i.e. cryptocurrency market predictions) for a fee, but how can you trust them? Most cryptocurrency exchanges offer historical candlestick and trade data for free. This tool allows you to validate if past predictions were met or not, so with a reasonable "signals dataset", you can fact-check if the "business" is legit or not.
@@ -26,9 +28,10 @@ NOTE: Huobi does not provide historical data with sufficient granularity, so it 
 
 ## Feature support
 
-- Low/High enter range, Stop Loss and arbitrary number of Take Profits with configurable Take Profit ratios.
-- Configurable adjusting Stop Loss to entry, to TP1, etc, as Take profit checkpoints are met.
-- Calculates maximum amount (in stablecoin USD) that could be invested in the signal.
+- Multiple entries with configurable ratios.
+- Multiple take profits with configurable ratios.
+- Adjustable stop losses on price checkpoints.
+- Calculates maximum amount (in stablecoin USD) that could have been invested in the signal.
 
 ## Installation
 
