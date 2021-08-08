@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"strconv"
 	"time"
 )
 
@@ -320,28 +319,17 @@ func (jf JsonFloat64) MarshalJSON() ([]byte, error) {
 	if math.IsInf(f, 0) || math.IsNaN(f) {
 		return nil, errors.New("unsupported value")
 	}
-
-	// Convert as if by ES6 number to string conversion.
-	// This matches most other JSON generators.
-	// See golang.org/issue/6384 and golang.org/issue/14135.
-	// Like fmt %g, but the exponent cutoffs are different
-	// and exponents themselves are not padded to two digits.
-	abs := math.Abs(f)
-	fmt := byte('f')
-	// Note: Must use float32 comparisons for underlying float32 value to get precise cutoffs right.
-	if abs != 0 && (abs < 1e-6 || abs >= 1e21) {
-		fmt = 'e'
-	}
-	b := strconv.AppendFloat(nil, f, fmt, -1, 64)
-	if fmt == 'e' {
-		// clean up e-09 to e-9
-		n := len(b)
-		if n >= 4 && b[n-4] == 'e' && b[n-3] == '-' && b[n-2] == '0' {
-			b[n-2] = b[n-1]
-			b = b[:n-1]
+	bs := []byte(fmt.Sprintf("%.12f", f))
+	for i := len(bs) - 1; i >= 0; i-- {
+		if bs[i] == '0' {
+			continue
 		}
+		if bs[i] == '.' {
+			return bs[:i], nil
+		}
+		return bs[:i+1], nil
 	}
-	return b, nil
+	return []byte("0"), nil
 }
 
 type Exchange interface {

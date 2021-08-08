@@ -7,10 +7,11 @@ import (
 type CandlestickIterator struct {
 	SavedCandlesticks []Candlestick
 	next              func() (Candlestick, error)
+	calmDuration      time.Duration
 }
 
 func NewCandlestickIterator(next func() (Candlestick, error)) *CandlestickIterator {
-	return &CandlestickIterator{next: next, SavedCandlesticks: nil}
+	return &CandlestickIterator{next: next, SavedCandlesticks: nil, calmDuration: 1 * time.Second}
 }
 
 func (ci *CandlestickIterator) SaveCandlesticks() {
@@ -34,7 +35,7 @@ func (ci *CandlestickIterator) GetPriceAt(at ISO8601) (JsonFloat64, error) {
 	for {
 		candlestick, err := ci.next()
 		if err == ErrRateLimit && rateLimitAttempts > 0 {
-			time.Sleep(1 * time.Second)
+			time.Sleep(ci.calmDuration)
 			rateLimitAttempts--
 			continue
 		}
