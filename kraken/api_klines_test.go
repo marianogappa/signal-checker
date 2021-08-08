@@ -3,6 +3,8 @@ package kraken
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/marianogappa/signal-checker/common"
@@ -87,6 +89,131 @@ func TestUnhappyToCandlesticks(t *testing.T) {
 				t.Fatalf("Candlestick should have failed to convert but converted successfully to: %v", cs)
 			}
 		})
+	}
+}
+
+func TestKlinesInvalidUrl(t *testing.T) {
+	i := 0
+	replies := []string{
+		`{"error":[],"result":{"XBTUSDT":[[1625623260,"34221.6","34221.6","34215.7","34215.7","34215.7","0.25998804",7]],"last":1626869340}}`,
+	}
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, replies[i%len(replies)])
+		i++
+	}))
+	defer ts.Close()
+
+	b := NewKraken()
+	b.overrideAPIURL("invalid url")
+	ci := b.BuildCandlestickIterator("BTC", "USDT", "2021-07-04T14:14:18+00:00")
+	_, err := ci.Next()
+	if err == nil {
+		t.Fatalf("should have failed due to invalid url")
+	}
+}
+
+func TestKlinesErrReadingResponseBody(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Length", "1")
+	}))
+	defer ts.Close()
+
+	b := NewKraken()
+	b.overrideAPIURL(ts.URL + "/")
+	ci := b.BuildCandlestickIterator("BTC", "USDT", "2021-07-04T14:14:18+00:00")
+	_, err := ci.Next()
+	if err == nil {
+		t.Fatalf("should have failed due to invalid response body")
+	}
+}
+
+func TestKlinesErrorResponse(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, `{"message":"error!"}`)
+	}))
+	defer ts.Close()
+
+	b := NewKraken()
+	b.overrideAPIURL(ts.URL + "/")
+	ci := b.BuildCandlestickIterator("BTC", "USDT", "2021-07-04T14:14:18+00:00")
+	_, err := ci.Next()
+	if err == nil {
+		t.Fatalf("should have failed due to error response")
+	}
+}
+
+func TestKlinesNon200Response(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(500)
+	}))
+	defer ts.Close()
+
+	b := NewKraken()
+	b.overrideAPIURL(ts.URL + "/")
+	ci := b.BuildCandlestickIterator("BTC", "USDT", "2021-07-04T14:14:18+00:00")
+	_, err := ci.Next()
+	if err == nil {
+		t.Fatalf("should have failed due to 500 response")
+	}
+}
+
+func TestKlinesInvalidJSONResponse(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, `invalid json`)
+	}))
+	defer ts.Close()
+
+	b := NewKraken()
+	b.overrideAPIURL(ts.URL + "/")
+	ci := b.BuildCandlestickIterator("BTC", "USDT", "2021-07-04T14:14:18+00:00")
+	_, err := ci.Next()
+	if err == nil {
+		t.Fatalf("should have failed due to invalid json")
+	}
+}
+
+func TestKlinesInvalidFloatsInJSONResponse(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, `{"error":[],"result":{"XBTUSDT":"INVALID","last":1626869340}}`)
+	}))
+	defer ts.Close()
+
+	b := NewKraken()
+	b.overrideAPIURL(ts.URL + "/")
+	ci := b.BuildCandlestickIterator("BTC", "USDT", "2021-07-04T14:14:18+00:00")
+	_, err := ci.Next()
+	if err == nil {
+		t.Fatalf("should have failed due to invalid floats in json")
+	}
+}
+
+func TestKlinesErrorInJSONResponse(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, `{"error":["one error!"],"result":{"XBTUSDT":[[1625623260,"34221.6","34221.6","34215.7","34215.7","34215.7","0.25998804",7]],"last":1626869340}}`)
+	}))
+	defer ts.Close()
+
+	b := NewKraken()
+	b.overrideAPIURL(ts.URL + "/")
+	ci := b.BuildCandlestickIterator("BTC", "USDT", "2021-07-04T14:14:18+00:00")
+	_, err := ci.Next()
+	if err == nil {
+		t.Fatalf("should have failed due to error in json response")
+	}
+}
+
+func TestKlinesErrorInJSONResponseLastField(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, `{"error":[],"result":{"XBTUSDT":[[1625623260,"34221.6","34221.6","34215.7","34215.7","34215.7","0.25998804",7]],"last":"1626869340"}}`)
+	}))
+	defer ts.Close()
+
+	b := NewKraken()
+	b.overrideAPIURL(ts.URL + "/")
+	ci := b.BuildCandlestickIterator("BTC", "USDT", "2021-07-04T14:14:18+00:00")
+	_, err := ci.Next()
+	if err == nil {
+		t.Fatalf("should have failed due to error in json response's 'last' field")
 	}
 }
 
