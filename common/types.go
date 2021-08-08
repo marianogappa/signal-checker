@@ -320,16 +320,17 @@ func (jf JsonFloat64) MarshalJSON() ([]byte, error) {
 		return nil, errors.New("unsupported value")
 	}
 	bs := []byte(fmt.Sprintf("%.12f", f))
-	for i := len(bs) - 1; i >= 0; i-- {
+	var i int
+	for i = len(bs) - 1; i >= 0; i-- {
 		if bs[i] == '0' {
 			continue
 		}
 		if bs[i] == '.' {
 			return bs[:i], nil
 		}
-		return bs[:i+1], nil
+		break
 	}
-	return []byte("0"), nil
+	return bs[:i+1], nil
 }
 
 type Exchange interface {

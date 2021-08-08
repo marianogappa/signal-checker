@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"reflect"
 	"testing"
 )
 
@@ -46,5 +47,55 @@ func TestJsonFloat64Fails(t *testing.T) {
 				t.Fatal("Expected marshalling to fail")
 			}
 		})
+	}
+}
+
+func TestToMillis(t *testing.T) {
+	ms, err := ISO8601("2021-07-04T14:14:18Z").Millis()
+	if err != nil {
+		t.Fatalf("should not have errored, but errored with %v", err)
+	}
+	if ms != 162540805800 {
+		t.Fatalf("expected ms to be %v but were %v", 162540805800, ms)
+	}
+
+	_, err = ISO8601("invalid").Millis()
+	if err == nil {
+		t.Fatal("should have errored, but didn't")
+	}
+}
+
+func TestCandlestickToTicks(t *testing.T) {
+	ticks := Candlestick{
+		Timestamp:      1499040000,
+		OpenPrice:      f(0.01634790),
+		ClosePrice:     f(0.01577100),
+		LowestPrice:    f(0.01575800),
+		HighestPrice:   f(0.80000000),
+		Volume:         f(148976.11427815),
+		NumberOfTrades: 308,
+	}.ToTicks()
+
+	if len(ticks) != 2 {
+		t.Fatalf("expected len(ticks) == 2 but was %v", len(ticks))
+	}
+
+	expectedTicks := []Tick{
+		{
+			Timestamp:      1499040000,
+			Price:          f(0.01575800),
+			Volume:         f(148976.11427815),
+			NumberOfTrades: 308,
+		},
+		{
+			Timestamp:      1499040000,
+			Price:          f(0.80000000),
+			Volume:         f(148976.11427815),
+			NumberOfTrades: 308,
+		},
+	}
+
+	if !reflect.DeepEqual(expectedTicks, ticks) {
+		t.Fatalf("expected ticks to be %v but were %v", expectedTicks, ticks)
 	}
 }
