@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/http/httputil"
 	"strings"
 	"time"
 
@@ -66,11 +65,7 @@ type klinesResult struct {
 }
 
 func (f FTX) getKlines(baseAsset string, quoteAsset string, startTimeSecs int) (klinesResult, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%vmarkets/%v/%v/candles", f.apiURL, strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset)), nil)
-	if err != nil {
-		return klinesResult{err: err}, err
-	}
-
+	req, _ := http.NewRequest("GET", fmt.Sprintf("%vmarkets/%v/%v/candles", f.apiURL, strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset)), nil)
 	q := req.URL.Query()
 	q.Add("resolution", "60")
 	q.Add("start_time", fmt.Sprintf("%v", startTimeSecs))
@@ -78,11 +73,6 @@ func (f FTX) getKlines(baseAsset string, quoteAsset string, startTimeSecs int) (
 	req.URL.RawQuery = q.Encode()
 
 	client := &http.Client{Timeout: 10 * time.Second}
-
-	requestDump, err := httputil.DumpRequest(req, true)
-	if err != nil {
-		log.Printf("Making request: %v\n", string(requestDump))
-	}
 
 	resp, err := client.Do(req)
 	if err != nil {

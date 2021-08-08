@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
-	"net/http/httputil"
 	"strconv"
 	"strings"
 	"time"
@@ -76,11 +74,7 @@ type aggTradesResult struct {
 }
 
 func (b BinanceUSDMFutures) getTrades(baseAsset string, quoteAsset string, startTimeMillis int) (aggTradesResult, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%vaggTrades", b.apiURL), nil)
-	if err != nil {
-		return aggTradesResult{err: err}, err
-	}
-
+	req, _ := http.NewRequest("GET", fmt.Sprintf("%vaggTrades", b.apiURL), nil)
 	symbol := fmt.Sprintf("%v%v", strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset))
 
 	q := req.URL.Query()
@@ -92,11 +86,6 @@ func (b BinanceUSDMFutures) getTrades(baseAsset string, quoteAsset string, start
 	req.URL.RawQuery = q.Encode()
 
 	client := &http.Client{Timeout: 10 * time.Second}
-
-	requestDump, err := httputil.DumpRequest(req, true)
-	if err != nil {
-		log.Printf("Making request: %v\n", string(requestDump))
-	}
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -146,8 +135,8 @@ func (b BinanceUSDMFutures) getTrades(baseAsset string, quoteAsset string, start
 	if len(trades) == 0 {
 		return aggTradesResult{
 			httpStatus: 200,
-			err:        common.ErrOutOfCandlesticks,
-		}, common.ErrOutOfCandlesticks
+			err:        common.ErrOutOfTrades,
+		}, common.ErrOutOfTrades
 	}
 
 	return aggTradesResult{

@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
-	"net/http/httputil"
 	"strconv"
 	"strings"
 	"time"
@@ -102,11 +100,7 @@ type klinesResult struct {
 }
 
 func (k Kucoin) getKlines(baseAsset string, quoteAsset string, startTimeSecs int) (klinesResult, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%vmarket/candles", k.apiURL), nil)
-	if err != nil {
-		return klinesResult{err: err}, err
-	}
-
+	req, _ := http.NewRequest("GET", fmt.Sprintf("%vmarket/candles", k.apiURL), nil)
 	symbol := fmt.Sprintf("%v-%v", strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset))
 
 	q := req.URL.Query()
@@ -117,11 +111,6 @@ func (k Kucoin) getKlines(baseAsset string, quoteAsset string, startTimeSecs int
 	req.URL.RawQuery = q.Encode()
 
 	client := &http.Client{Timeout: 10 * time.Second}
-
-	requestDump, err := httputil.DumpRequest(req, true)
-	if err != nil {
-		log.Printf("Making request: %v\n", string(requestDump))
-	}
 
 	resp, err := client.Do(req)
 	if err != nil {

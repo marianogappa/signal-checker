@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/http/httputil"
 	"strings"
 	"time"
 
@@ -71,10 +70,7 @@ type klinesResult struct {
 }
 
 func (c Coinbase) getKlines(baseAsset string, quoteAsset string, startTimeISO8601, endTimeISO8601 string) (klinesResult, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%vproducts/%v-%v/candles", c.apiURL, strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset)), nil)
-	if err != nil {
-		return klinesResult{err: err}, err
-	}
+	req, _ := http.NewRequest("GET", fmt.Sprintf("%vproducts/%v-%v/candles", c.apiURL, strings.ToUpper(baseAsset), strings.ToUpper(quoteAsset)), nil)
 
 	q := req.URL.Query()
 	q.Add("granularity", "60")
@@ -84,11 +80,6 @@ func (c Coinbase) getKlines(baseAsset string, quoteAsset string, startTimeISO860
 	req.URL.RawQuery = q.Encode()
 
 	client := &http.Client{Timeout: 10 * time.Second}
-
-	requestDump, err := httputil.DumpRequest(req, true)
-	if err != nil {
-		log.Printf("Making request: %v\n", string(requestDump))
-	}
 
 	resp, err := client.Do(req)
 	if err != nil {
