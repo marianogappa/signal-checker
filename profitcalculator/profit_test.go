@@ -1,6 +1,7 @@
 package profitcalculator
 
 import (
+	"math"
 	"testing"
 
 	"github.com/marianogappa/signal-checker/common"
@@ -75,7 +76,7 @@ func TestProfitCalculator(t *testing.T) {
 				},
 			},
 			expected:           []float64{0.0},
-			expectedIsFinished: true,
+			expectedIsFinished: false,
 		},
 		{
 			name: "Do not enter, incorrect stop loss",
@@ -103,7 +104,7 @@ func TestProfitCalculator(t *testing.T) {
 			input: common.SignalCheckInput{
 				BaseAsset:        "BTC",
 				QuoteAsset:       "USDT",
-				Entries:          []common.JsonFloat64{1.0},
+				Entries:          []common.JsonFloat64{0.1},
 				EntryRatios:      []common.JsonFloat64{1.0},
 				TakeProfits:      []common.JsonFloat64{1.0},
 				TakeProfitRatios: []common.JsonFloat64{1.0},
@@ -862,7 +863,7 @@ func TestProfitCalculator(t *testing.T) {
 				},
 			},
 			expected:           []float64{0.0},
-			expectedIsFinished: true,
+			expectedIsFinished: false,
 		},
 		{
 			name: "out of sync: invalidating at first event",
@@ -896,6 +897,7 @@ func TestProfitCalculator(t *testing.T) {
 				StopLoss:         common.JsonFloat64(10.0),
 				TakeProfits:      []common.JsonFloat64{100.0},
 				TakeProfitRatios: []common.JsonFloat64{1},
+				Debug:            true,
 			},
 			events: []common.SignalCheckOutputEvent{
 				{
@@ -935,12 +937,12 @@ func TestProfitCalculator(t *testing.T) {
 			}
 			for i, ev := range ts.events {
 				actual := profitCalculator.ApplyEvent(ev)
-				if actual != ts.expected[i] {
+				if math.Abs(actual-ts.expected[i]) > 1e-14 {
 					t.Fatalf("On event %v expected %v to equal %v", i, actual, ts.expected[i])
 				}
 			}
 			actual := profitCalculator.CalculateTakeProfitRatio()
-			if actual != ts.expected[len(ts.events)-1] {
+			if math.Abs(actual-ts.expected[len(ts.events)-1]) > 1e-14 {
 				t.Fatalf("On final calculation expected %v to equal %v", actual, ts.expected[len(ts.events)-1])
 			}
 			actualIsFinished := profitCalculator.IsFinished()
