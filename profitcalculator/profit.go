@@ -155,6 +155,10 @@ func (p ProfitCalculator) IsFinished() bool {
 }
 
 func (p ProfitCalculator) CalculateTakeProfitRatio() float64 {
+	base := float64(1)
+	if p.input.IsShort {
+		base *= -1
+	}
 	if p.entryPrice == 0 {
 		return 0
 	}
@@ -162,7 +166,7 @@ func (p ProfitCalculator) CalculateTakeProfitRatio() float64 {
 	if p.input.IsShort {
 		resultIn *= -1
 	}
-	tpr := resultIn + p.ratioOut - 1 + p.ratioAwaitingEnter
+	tpr := resultIn + p.ratioOut - base + p.ratioAwaitingEnter
 	if p.input.Debug {
 		log.Printf("ProfitCalculator: awaiting enter = %v, taken out = %v, position size = %v, entry price = %v (PS*EP = %v). Take profit ratio =  %v\n",
 			p.ratioAwaitingEnter, p.ratioOut, p.positionSize, p.entryPrice, resultIn, tpr,

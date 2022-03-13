@@ -38,6 +38,27 @@ func TestProfitCalculator(t *testing.T) {
 			expectedIsFinished: true,
 		},
 		{
+			name: "(short) Do not enter, invalidate",
+			input: common.SignalCheckInput{
+				BaseAsset:        "BTC",
+				QuoteAsset:       "USDT",
+				Entries:          []common.JsonFloat64{1.0},
+				EntryRatios:      []common.JsonFloat64{1.0},
+				TakeProfits:      []common.JsonFloat64{1.0},
+				TakeProfitRatios: []common.JsonFloat64{1.0},
+				IsShort:          true,
+			},
+			events: []common.SignalCheckOutputEvent{
+				{
+					EventType: common.INVALIDATED,
+					Price:     1,
+					At:        "2020-01-02T03:04:05+00:00",
+				},
+			},
+			expected:           []float64{0.0},
+			expectedIsFinished: true,
+		},
+		{
 			name: "Do not enter, finish dataset",
 			input: common.SignalCheckInput{
 				BaseAsset:        "BTC",
@@ -46,6 +67,27 @@ func TestProfitCalculator(t *testing.T) {
 				EntryRatios:      []common.JsonFloat64{1.0},
 				TakeProfits:      []common.JsonFloat64{1.0},
 				TakeProfitRatios: []common.JsonFloat64{1.0},
+			},
+			events: []common.SignalCheckOutputEvent{
+				{
+					EventType: common.FINISHED_DATASET,
+					Price:     1,
+					At:        "2020-01-02T03:04:05+00:00",
+				},
+			},
+			expected:           []float64{0.0},
+			expectedIsFinished: true,
+		},
+		{
+			name: "(short) Do not enter, finish dataset",
+			input: common.SignalCheckInput{
+				BaseAsset:        "BTC",
+				QuoteAsset:       "USDT",
+				Entries:          []common.JsonFloat64{1.0},
+				EntryRatios:      []common.JsonFloat64{1.0},
+				TakeProfits:      []common.JsonFloat64{1.0},
+				TakeProfitRatios: []common.JsonFloat64{1.0},
+				IsShort:          true,
 			},
 			events: []common.SignalCheckOutputEvent{
 				{
@@ -79,6 +121,28 @@ func TestProfitCalculator(t *testing.T) {
 			expectedIsFinished: false,
 		},
 		{
+			name: "(short) Do not enter, incorrect take profit",
+			input: common.SignalCheckInput{
+				BaseAsset:        "BTC",
+				QuoteAsset:       "USDT",
+				Entries:          []common.JsonFloat64{1.0},
+				EntryRatios:      []common.JsonFloat64{1.0},
+				TakeProfits:      []common.JsonFloat64{1.0},
+				TakeProfitRatios: []common.JsonFloat64{1.0},
+				IsShort:          true,
+			},
+			events: []common.SignalCheckOutputEvent{
+				{
+					EventType: common.TOOK_PROFIT,
+					Target:    1,
+					Price:     1,
+					At:        "2020-01-02T03:04:05+00:00",
+				},
+			},
+			expected:           []float64{0.0},
+			expectedIsFinished: false,
+		},
+		{
 			name: "Do not enter, incorrect stop loss",
 			input: common.SignalCheckInput{
 				BaseAsset:        "BTC",
@@ -87,6 +151,28 @@ func TestProfitCalculator(t *testing.T) {
 				EntryRatios:      []common.JsonFloat64{1.0},
 				TakeProfits:      []common.JsonFloat64{1.0},
 				TakeProfitRatios: []common.JsonFloat64{1.0},
+			},
+			events: []common.SignalCheckOutputEvent{
+				{
+					EventType: common.STOPPED_LOSS,
+					Target:    1,
+					Price:     0.1,
+					At:        "2020-01-02T03:04:05+00:00",
+				},
+			},
+			expected:           []float64{0.0},
+			expectedIsFinished: true,
+		},
+		{
+			name: "(short) Do not enter, incorrect stop loss",
+			input: common.SignalCheckInput{
+				BaseAsset:        "BTC",
+				QuoteAsset:       "USDT",
+				Entries:          []common.JsonFloat64{1.0},
+				EntryRatios:      []common.JsonFloat64{1.0},
+				TakeProfits:      []common.JsonFloat64{1.0},
+				TakeProfitRatios: []common.JsonFloat64{1.0},
+				IsShort:          true,
 			},
 			events: []common.SignalCheckOutputEvent{
 				{
@@ -127,6 +213,34 @@ func TestProfitCalculator(t *testing.T) {
 			expectedIsFinished: true,
 		},
 		{
+			name: "(short) enter (last), invalidate",
+			input: common.SignalCheckInput{
+				BaseAsset:        "BTC",
+				QuoteAsset:       "USDT",
+				Entries:          []common.JsonFloat64{0.1},
+				EntryRatios:      []common.JsonFloat64{1.0},
+				TakeProfits:      []common.JsonFloat64{0.01},
+				TakeProfitRatios: []common.JsonFloat64{1.0},
+				IsShort:          true,
+			},
+			events: []common.SignalCheckOutputEvent{
+				{
+					EventType: common.ENTERED,
+					Target:    1,
+					Price:     0.1,
+					At:        "2020-01-02T03:04:05+00:00",
+				},
+				{
+					EventType: common.INVALIDATED,
+					Target:    1,
+					Price:     1,
+					At:        "2020-01-02T04:04:05+00:00",
+				},
+			},
+			expected:           []float64{0.0, -9.0},
+			expectedIsFinished: true,
+		},
+		{
 			name: "enter (last), finish dataset",
 			input: common.SignalCheckInput{
 				BaseAsset:        "BTC",
@@ -151,6 +265,34 @@ func TestProfitCalculator(t *testing.T) {
 				},
 			},
 			expected:           []float64{0.0, 9.0},
+			expectedIsFinished: true,
+		},
+		{
+			name: "(short) enter (last), finish dataset",
+			input: common.SignalCheckInput{
+				BaseAsset:        "BTC",
+				QuoteAsset:       "USDT",
+				Entries:          []common.JsonFloat64{1.0},
+				EntryRatios:      []common.JsonFloat64{1.0},
+				TakeProfits:      []common.JsonFloat64{0.1},
+				TakeProfitRatios: []common.JsonFloat64{1.0},
+				IsShort:          true,
+			},
+			events: []common.SignalCheckOutputEvent{
+				{
+					EventType: common.ENTERED,
+					Target:    1,
+					Price:     0.1,
+					At:        "2020-01-02T03:04:05+00:00",
+				},
+				{
+					EventType: common.FINISHED_DATASET,
+					Target:    1,
+					Price:     1,
+					At:        "2020-01-02T04:04:05+00:00",
+				},
+			},
+			expected:           []float64{0.0, -9.0},
 			expectedIsFinished: true,
 		},
 		{
@@ -181,6 +323,34 @@ func TestProfitCalculator(t *testing.T) {
 			expectedIsFinished: true,
 		},
 		{
+			name: "(short) enter (last), stop loss",
+			input: common.SignalCheckInput{
+				BaseAsset:        "BTC",
+				QuoteAsset:       "USDT",
+				Entries:          []common.JsonFloat64{10.0},
+				EntryRatios:      []common.JsonFloat64{1.0},
+				StopLoss:         common.JsonFloat64(100.0),
+				TakeProfits:      []common.JsonFloat64{1.0},
+				TakeProfitRatios: []common.JsonFloat64{1.0},
+				IsShort:          true,
+			},
+			events: []common.SignalCheckOutputEvent{
+				{
+					EventType: common.ENTERED,
+					Target:    1,
+					Price:     10,
+					At:        "2020-01-02T03:04:05+00:00",
+				},
+				{
+					EventType: common.STOPPED_LOSS,
+					Price:     100,
+					At:        "2020-01-02T04:04:05+00:00",
+				},
+			},
+			expected:           []float64{0.0, -9},
+			expectedIsFinished: true,
+		},
+		{
 			name: "enter (last), take profit (last)",
 			input: common.SignalCheckInput{
 				BaseAsset:        "BTC",
@@ -206,6 +376,35 @@ func TestProfitCalculator(t *testing.T) {
 				},
 			},
 			expected:           []float64{0.0, 9.0},
+			expectedIsFinished: true,
+		},
+		{
+			name: "(short) enter (last), take profit (last)",
+			input: common.SignalCheckInput{
+				BaseAsset:        "BTC",
+				QuoteAsset:       "USDT",
+				Entries:          []common.JsonFloat64{10.0},
+				EntryRatios:      []common.JsonFloat64{1.0},
+				StopLoss:         common.JsonFloat64(100.0),
+				TakeProfits:      []common.JsonFloat64{1.0},
+				TakeProfitRatios: []common.JsonFloat64{1.0},
+				IsShort:          true,
+			},
+			events: []common.SignalCheckOutputEvent{
+				{
+					EventType: common.ENTERED,
+					Target:    1,
+					Price:     10,
+					At:        "2020-01-02T03:04:05+00:00",
+				},
+				{
+					EventType: common.TOOK_PROFIT,
+					Target:    1,
+					Price:     1,
+					At:        "2020-01-02T04:04:05+00:00",
+				},
+			},
+			expected:           []float64{0.0, 0.9},
 			expectedIsFinished: true,
 		},
 		{
@@ -239,6 +438,40 @@ func TestProfitCalculator(t *testing.T) {
 				},
 			},
 			expected:           []float64{0.0, 9, 4.5},
+			expectedIsFinished: true,
+		},
+		{
+			name: "(short) enter (last), take profit (one remaining), invalidate",
+			input: common.SignalCheckInput{
+				BaseAsset:        "BTC",
+				QuoteAsset:       "USDT",
+				Entries:          []common.JsonFloat64{10.0},
+				EntryRatios:      []common.JsonFloat64{1.0},
+				StopLoss:         common.JsonFloat64(100.0),
+				TakeProfits:      []common.JsonFloat64{1.0, 0.1},
+				TakeProfitRatios: []common.JsonFloat64{0.5, 0.5},
+				IsShort:          true,
+			},
+			events: []common.SignalCheckOutputEvent{
+				{
+					EventType: common.ENTERED,
+					Target:    1,
+					Price:     10,
+					At:        "2020-01-02T03:04:05+00:00",
+				},
+				{
+					EventType: common.TOOK_PROFIT,
+					Target:    1,
+					Price:     1,
+					At:        "2020-01-02T04:04:05+00:00",
+				},
+				{
+					EventType: common.INVALIDATED,
+					Price:     10,
+					At:        "2020-01-02T05:04:05+00:00",
+				},
+			},
+			expected:           []float64{0.0, 0.9, 4.5},
 			expectedIsFinished: true,
 		},
 		{
