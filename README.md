@@ -7,7 +7,11 @@
 
 cli tool, server & library to check the results of crypto signals against an exchange's historical data.
 
-⚠️⚠️⚠️ Warning: API unstable, important parts still missing (e.g. SHORT signal support) ⚠️⚠️⚠️
+<img width="1667" alt="Signal Checker UI" src="https://user-images.githubusercontent.com/1078546/158064239-d5405657-c456-4bfe-8367-a6c2b2684e54.png">
+
+Note: this is not signal-checker, but an incomplete frontend for it (e.g. does not support Take Profit Ratios) which is available online [here](https://signal-checker-ui.herokuapp.com/).
+
+⚠️ Warning: API unstable (e.g. SHORT signal support not properly tested). Contact me if you want to use this. ⚠️
 
 ## What can you do with this?
 
