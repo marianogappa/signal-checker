@@ -5,7 +5,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/marianogappa/signal-checker)](https://goreportcard.com/report/github.com/marianogappa/signal-checker)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-cli tool, server & library to check the results of crypto signals against an exchange's historical data.
+cli tool, server & importable Go library to check the results of crypto signals against an exchange's historical data.
 
 <img width="1667" alt="Signal Checker UI" src="https://user-images.githubusercontent.com/1078546/158064239-d5405657-c456-4bfe-8367-a6c2b2684e54.png">
 
