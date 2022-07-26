@@ -9,7 +9,7 @@ cli tool, server & importable Go library to check the results of crypto signals 
 
 <img width="1667" alt="Signal Checker UI" src="https://user-images.githubusercontent.com/1078546/158064239-d5405657-c456-4bfe-8367-a6c2b2684e54.png">
 
-Note: this is not signal-checker, but an incomplete frontend for it (e.g. does not support Take Profit Ratios) which is available online [here](https://signal-checker-ui.herokuapp.com/).
+Note: this is not signal-checker, but a frontend for it (e.g. does not support Take Profit Ratios).
 
 ⚠️ Warning: API unstable (e.g. SHORT signal support not properly tested). Contact me if you want to use this. ⚠️
 
